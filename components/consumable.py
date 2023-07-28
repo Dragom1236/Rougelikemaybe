@@ -16,11 +16,13 @@ from input_handlers import (
 
 if TYPE_CHECKING:
     from entity import Actor, Item
+    from Status import StatusEffect
 
 
 class Consumable(BaseComponent):
-    def __init__(self, time_cost: float | int = 0):
+    def __init__(self, time_cost: float | int = 0, effect: StatusEffect = None):
         self.time_cost = time_cost
+        self.effect = effect
 
     parent: Item
 
@@ -44,8 +46,8 @@ class Consumable(BaseComponent):
 
 
 class HealingConsumable(Consumable):
-    def __init__(self, amount: int, time_cost=1):
-        super().__init__(time_cost)
+    def __init__(self, amount: int, time_cost=1, effect: StatusEffect = None):
+        super().__init__(time_cost, effect)
         self.amount = amount
 
     def activate(self, action: actions.ItemAction) -> None:
@@ -54,6 +56,8 @@ class HealingConsumable(Consumable):
             raise Impossible(f"You don't have enough time.")
 
         amount_recovered = consumer.fighter.heal(self.amount)
+        if self.effect:
+            consumer.status_effect_manager.add_effect(self.effect)
 
         if amount_recovered > 0:
             self.engine.message_log.add_message(

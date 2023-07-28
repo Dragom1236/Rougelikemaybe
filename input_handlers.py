@@ -99,8 +99,6 @@ class EventHandler(BaseEventHandler):
         if isinstance(action_or_state, BaseEventHandler):
             return action_or_state
         if self.handle_action(action_or_state):
-            if self.engine.player.level.requires_level_up:
-                return LevelUpEventHandler(self.engine)
             # A valid action was performed.
             if not self.engine.player.is_alive:
                 # The player was killed sometime during or after the action.
@@ -184,19 +182,6 @@ class MainGameEventHandler(EventHandler):
 
 
 class GameOverEventHandler(EventHandler):
-    def handle_events(self, context: tcod.context.Context) -> None:
-        for event in tcod.event.wait():
-            action = self.dispatch(event)
-
-            if action is None:
-                continue
-
-            action.perform()
-
-    def ev_keydown(self, event: tcod.event.KeyDown) -> None:
-        if event.sym == tcod.event.KeySym.ESCAPE:
-            self.on_quit()
-
     def on_quit(self) -> None:
         """Handle exiting out of a finished game."""
         if os.path.exists("savegame.sav"):
@@ -205,6 +190,10 @@ class GameOverEventHandler(EventHandler):
 
     def ev_quit(self, event: tcod.event.Quit) -> None:
         self.on_quit()
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> None:
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            self.on_quit()
 
 
 CURSOR_Y_KEYS = {

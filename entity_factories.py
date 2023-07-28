@@ -4,6 +4,7 @@ from components.ai import HostileEnemy, FleeingAI
 from components.fighter import Fighter
 from components.inventory import Inventory
 from components.level import Level
+from effect_factories import regeneration_effect
 from entity import Actor, Item
 
 player = Actor(
@@ -59,7 +60,7 @@ health_potion = Item(
     char="!",
     color=(127, 0, 255),
     name="Health Potion",
-    consumable=consumable.HealingConsumable(amount=4),
+    consumable=consumable.HealingConsumable(amount=4,effect=regeneration_effect),
 )
 lightning_scroll = Item(
     char="~",

@@ -2,7 +2,7 @@ from components.Status import StatusEffect
 
 # Health Potion Effect
 health_potion_effect = StatusEffect(
-    name="Health Potion",
+    name="Vitality Potion",
     duration=5,
     modifier_data={"hp_modifier": 20},
     cot_effect_data={},
@@ -29,7 +29,7 @@ regeneration_effect = StatusEffect(
     name="Regeneration",
     duration=6,
     modifier_data={},
-    cot_effect_data={"hp_change_per_turn": 15},
+    cot_effect_data={"hp_change_per_turn": 10},
 )
 
 # Slow Effect

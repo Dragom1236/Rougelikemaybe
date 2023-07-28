@@ -12,12 +12,12 @@ class Level(BaseComponent):
     parent: Actor
 
     def __init__(
-        self,
-        current_level: int = 1,
-        current_xp: int = 0,
-        level_up_base: int = 0,
-        level_up_factor: int = 150,
-        xp_given: int = 0,
+            self,
+            current_level: int = 1,
+            current_xp: int = 0,
+            level_up_base: int = 0,
+            level_up_factor: int = 150,
+            xp_given: int = 0,
     ):
         self.current_level = current_level
         self.current_xp = current_xp
@@ -104,7 +104,7 @@ class Level(BaseComponent):
 
     @property
     def level_up_options(self):
-        return [self.increase_strength,self.increase_dexterity,
-                self.increase_agility,self.increase_constitution,
+        return [self.increase_strength, self.increase_dexterity,
+                self.increase_agility, self.increase_constitution,
                 self.increase_magic, self.increase_awareness,
                 self.increase_charisma]
