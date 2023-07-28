@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import dill
@@ -38,6 +39,10 @@ class Engine:
                     if entity.fighter.time > 0:
                         while entity.fighter.time > 0:
                             entity.ai.perform()
+                            if entity.level.requires_level_up:
+                                level_up_options = entity.level.level_up_options
+                                level_up_option = random.choice(level_up_options)
+                                level_up_option()
                 except exceptions.Impossible:
                     pass  # Ignore impossible action exceptions from AI.
                 # parent.status_effect_manager.add_effect(regeneration_effect)

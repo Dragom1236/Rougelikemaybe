@@ -38,64 +38,73 @@ class Level(BaseComponent):
             return
 
         self.current_xp += xp
-
-        self.engine.message_log.add_message(f"You gain {xp} experience points.")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message(f"You gain {xp} experience points.")
 
         if self.requires_level_up:
-            self.engine.message_log.add_message(
-                f"You advance to level {self.current_level + 1}!"
-            )
+            if self.parent == self.engine.player:
+                self.engine.message_log.add_message(
+                    f"You advance to level {self.current_level + 1}!"
+                )
 
     def increase_level(self) -> None:
         self.current_xp -= self.experience_to_next_level
 
         self.current_level += 1
+        self.parent.fighter.update_stats()
 
     def increase_constitution(self, amount: int = 1) -> None:
         self.parent.fighter.modify_constitution(amount)
-
-        self.engine.message_log.add_message("Your constitution increases!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("Your constitution increases!")
 
         self.increase_level()
 
     def increase_strength(self, amount: int = 1) -> None:
         self.parent.fighter.modify_strength(amount)
-
-        self.engine.message_log.add_message("You feel stronger!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("You feel stronger!")
 
         self.increase_level()
 
     def increase_dexterity(self, amount: int = 1) -> None:
         self.parent.fighter.modify_dexterity(amount)
-
-        self.engine.message_log.add_message("Your movements are getting swifter!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("Your movements are getting swifter!")
 
         self.increase_level()
 
     def increase_agility(self, amount: int = 1) -> None:
         self.parent.fighter.modify_agility(amount)
-
-        self.engine.message_log.add_message("You feel more agile!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("You feel more agile!")
 
         self.increase_level()
 
     def increase_magic(self, amount: int = 1) -> None:
         self.parent.fighter.modify_magic(amount)
-
-        self.engine.message_log.add_message("Your magical prowess grows!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("Your magical prowess grows!")
 
         self.increase_level()
 
     def increase_awareness(self, amount: int = 1) -> None:
         self.parent.fighter.modify_awareness(amount)
-
-        self.engine.message_log.add_message("You feel more aware of your surroundings!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("You feel more aware of your surroundings!")
 
         self.increase_level()
 
     def increase_charisma(self, amount: int = 1) -> None:
         self.parent.fighter.modify_charisma(amount)
-
-        self.engine.message_log.add_message("Your charisma improves!")
+        if self.parent == self.engine.player:
+            self.engine.message_log.add_message("Your charisma improves!")
 
         self.increase_level()
+
+    @property
+    def level_up_options(self):
+        return [self.increase_strength,self.increase_dexterity,
+                self.increase_agility,self.increase_constitution,
+                self.increase_magic, self.increase_awareness,
+                self.increase_charisma]
