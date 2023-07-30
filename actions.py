@@ -157,17 +157,52 @@ class MeleeAction(ActionWithDirection):
         self.entity.fighter.time = self.entity.fighter.time - self.time_cost
 
 
+class MeleeWeaponAction(ActionWithDirection):
+    def __init__(self, entity, dx, dy):
+        super().__init__(entity, dx, dy, time_cost=entity.equipment.weapon.equippable.time_cost)
+
+    def perform(self) -> None:
+        target = self.target_actor
+
+        if not target:
+            raise exceptions.Impossible("Nothing to attack.")
+
+        damage = self.entity.equipment.weapon.equippable.roll_damage() + self.entity.fighter.power - target.fighter.defense
+
+        attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
+        if self.entity is self.engine.player:
+            attack_color = color.player_atk
+        else:
+            attack_color = color.enemy_atk
+
+        if damage > 0:
+            self.engine.message_log.add_message(
+                f"{attack_desc} for {damage} hit points.", attack_color
+            )
+            target.fighter.hp -= damage
+            if not target.is_alive and target is not self.engine.player:
+                self.entity.level.add_xp(target.level.xp_given)
+        else:
+            self.engine.message_log.add_message(
+                f"{attack_desc} but does no damage.", attack_color
+            )
+
+        self.entity.fighter.time -= self.time_cost
 
 
 class BumpAction(ActionWithDirection):
     def perform(self) -> None:
         self.time_cost = 0
+        weapon_action = MeleeWeaponAction(self.entity,self.dx,self.dy)
         melee_action = MeleeAction(self.entity, self.dx, self.dy)
         movement_action = MovementAction(self.entity, self.dx, self.dy)
-
         if self.target_actor:
-            if self.entity.fighter.time >= melee_action.time_cost:
-                return melee_action.perform()
+            if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.attack_type =="melee":
+                if self.entity.fighter.time >= weapon_action.time_cost:
+                    return weapon_action.perform()
+                else:
+                    if self.entity.fighter.time >= melee_action.time_cost:
+                        return melee_action.perform()
             else:
                 raise exceptions.Impossible("You do not have enough time.")
 
@@ -176,6 +211,20 @@ class BumpAction(ActionWithDirection):
                 return movement_action.perform()
             else:
                 raise exceptions.Impossible("You do not have enough time.")
+
+
+class EquipAction(Action):
+    def __init__(self, entity: Actor, item: Item):
+        super().__init__(entity, time_cost=0.5)
+
+        self.item = item
+
+    def perform(self) -> None:
+        if self.entity.fighter.time >= self.cost:
+            self.entity.equipment.toggle_equip(self.item)
+            self.entity.fighter.time = self.entity.fighter.time - self.cost
+        else:
+            raise exceptions.Impossible("You don't have enough time.")
 
 
 class ItemAction(Action):
@@ -195,13 +244,14 @@ class ItemAction(Action):
 
     def perform(self) -> None:
         """Invoke the items ability, this action will be given to provide context."""
-        if self.entity.fighter.time >= self.item.consumable.time_cost:
-            if self.item in self.entity.inventory.items:
-                self.item.consumable.activate(self)
+        if self.item.consumable:
+            if self.entity.fighter.time >= self.item.consumable.time_cost:
+                if self.item in self.entity.inventory.items:
+                    self.item.consumable.activate(self)
+                else:
+                    exceptions.Impossible(f"Item exhausted.")
             else:
-                exceptions.Impossible(f"Item exhausted.")
-        else:
-            raise exceptions.Impossible(f"Not enough time to proceed.")
+                raise exceptions.Impossible(f"Not enough time to proceed.")
 
 
 class PickupAction(Action):
@@ -237,6 +287,8 @@ class DropItem(ItemAction):
     def perform(self) -> None:
         self.time_cost = 0.1
         if self.entity.fighter.time >= self.cost:
+            if self.entity.equipment.item_is_equipped(self.item):
+                self.entity.equipment.toggle_equip(self.item)
             self.entity.inventory.drop(self.item)
         else:
             raise exceptions.Impossible("You do not have enough time.")

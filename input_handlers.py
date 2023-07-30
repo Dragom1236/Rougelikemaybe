@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 import tcod.event
-from typing import Optional, TYPE_CHECKING, Callable, Tuple, Union
+from typing import Optional, TYPE_CHECKING, Callable, Tuple, Union, List
 from tcod import libtcodpy
 import tcod.event
 
@@ -17,11 +17,12 @@ from actions import (
 
 import color
 import exceptions
+
 from effect_factories import poison_effect, regeneration_effect
 
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Item
+    from entity import Item, Actor
 
 MOVE_KEYS = {
     # Arrow keys.
@@ -172,6 +173,10 @@ class MainGameEventHandler(EventHandler):
             return InventoryActivateHandler(self.engine)
         elif key == tcod.event.KeySym.d:
             return InventoryDropHandler(self.engine)
+        elif key == tcod.event.KeySym.c and modifier & (
+                tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
+        ):
+            return ConditionsViewerEventHandler(self.engine)
         elif key == tcod.event.KeySym.c:
             return CharacterScreenEventHandler(self.engine)
         elif key == tcod.event.KeySym.SLASH:
@@ -330,7 +335,14 @@ class InventoryEventHandler(AskUserEventHandler):
         if number_of_items_in_inventory > 0:
             for i, item in enumerate(self.engine.player.inventory.items):
                 item_key = chr(ord("a") + i)
-                console.print(x + 1, y + i + 1, f"({item_key}) {item.name}")
+                is_equipped = self.engine.player.equipment.item_is_equipped(item)
+
+                item_string = f"({item_key}) {item.name}"
+
+                if is_equipped:
+                    item_string = f"{item_string} (E)"
+
+                console.print(x + 1, y + i + 1, item_string)
         else:
             console.print(x + 1, y + 1, "(Empty)")
 
@@ -359,8 +371,13 @@ class InventoryActivateHandler(InventoryEventHandler):
     TITLE = "Select an item to use"
 
     def on_item_selected(self, item: Item) -> Optional[ActionOrHandler]:
-        """Return the action for the selected item."""
-        return item.consumable.get_action(self.engine.player)
+        if item.consumable:
+            # Return the action for the selected item.
+            return item.consumable.get_action(self.engine.player)
+        elif item.equippable:
+            return actions.EquipAction(self.engine.player, item)
+        else:
+            return None
 
 
 class InventoryDropHandler(InventoryEventHandler):
@@ -483,6 +500,7 @@ class AreaRangedAttackHandler(SelectIndexHandler):
     def on_index_selected(self, x: int, y: int) -> Optional[Action]:
         return self.callback((x, y))
 
+
 class PopupMessage(BaseEventHandler):
     """Display a popup text window."""
 
@@ -509,6 +527,7 @@ class PopupMessage(BaseEventHandler):
         """Any key returns to the parent handler."""
         return self.parent
 
+
 class LevelUpEventHandler(AskUserEventHandler):
     TITLE = "Level Up"
 
@@ -523,7 +542,7 @@ class LevelUpEventHandler(AskUserEventHandler):
         console.draw_frame(
             x=x,
             y=0,
-            width=35,
+            width=50,
             height=14,
             title=self.TITLE,
             clear=True,
@@ -537,7 +556,7 @@ class LevelUpEventHandler(AskUserEventHandler):
         console.print(
             x=x + 1,
             y=4,
-            string=f"a) Constitution (+20 Health Points, from {self.engine.player.fighter.constitution})",
+            string=f"a) Constitution (+1 Constitution, from {self.engine.player.fighter.constitution})",
         )
         console.print(
             x=x + 1,
@@ -598,7 +617,7 @@ class LevelUpEventHandler(AskUserEventHandler):
         return super().ev_keydown(event)
 
     def ev_mousebuttondown(
-        self, event: tcod.event.MouseButtonDown
+            self, event: tcod.event.MouseButtonDown
     ) -> Optional[ActionOrHandler]:
         """
         Don't allow the player to click to exit the menu, like normal.
@@ -625,7 +644,7 @@ class CharacterScreenEventHandler(AskUserEventHandler):
             x=x,
             y=y,
             width=width,
-            height=21,  # Updated height to accommodate additional stats
+            height=22,  # Updated height to accommodate additional stats
             title=self.TITLE,
             clear=True,
             fg=(255, 255, 255),
@@ -660,32 +679,70 @@ class CharacterScreenEventHandler(AskUserEventHandler):
             x=x + 1, y=y + 8, string=f"Attack: {self.engine.player.fighter.power}"
         )
         console.print(
-            x=x + 1, y=y + 9, string=f"Defense: {self.engine.player.fighter.defense}"
+            x=x + 1, y=y + 9, string=f"Weapon Damage: {self.engine.player.equipment.damage_range}"
         )
         console.print(
-            x=x + 1, y=y + 10, string=f"Magical Attack: {self.engine.player.fighter.magical_attack}"
+            x=x + 1, y=y + 10, string=f"Defense: {self.engine.player.fighter.defense}"
         )
         console.print(
-            x=x + 1, y=y + 11, string=f"Sight Range: {self.engine.player.fighter.sight_range}"
+            x=x + 1, y=y + 11, string=f"Magical Attack: {self.engine.player.fighter.magical_attack}"
         )
         console.print(
-            x=x + 1, y=y + 12, string=f"Strength: {self.engine.player.fighter.strength}"
+            x=x + 1, y=y + 12, string=f"Sight Range: {self.engine.player.fighter.sight_range}"
         )
         console.print(
-            x=x + 1, y=y + 13, string=f"Dexterity: {self.engine.player.fighter.dexterity}"
+            x=x + 1, y=y + 13, string=f"Strength: {self.engine.player.fighter.strength}"
         )
         console.print(
-            x=x + 1, y=y + 14, string=f"Agility: {self.engine.player.fighter.agility}"
+            x=x + 1, y=y + 14, string=f"Dexterity: {self.engine.player.fighter.dexterity}"
         )
         console.print(
-            x=x + 1, y=y + 15, string=f"Constitution: {self.engine.player.fighter.constitution}"
+            x=x + 1, y=y + 15, string=f"Agility: {self.engine.player.fighter.agility}"
         )
         console.print(
-            x=x + 1, y=y + 16, string=f"Magic: {self.engine.player.fighter.magic}"
+            x=x + 1, y=y + 16, string=f"Constitution: {self.engine.player.fighter.constitution}"
         )
         console.print(
-            x=x + 1, y=y + 17, string=f"Awareness: {self.engine.player.fighter.awareness}"
+            x=x + 1, y=y + 17, string=f"Magic: {self.engine.player.fighter.magic}"
         )
         console.print(
-            x=x + 1, y=y + 18, string=f"Charisma: {self.engine.player.fighter.charisma}"
+            x=x + 1, y=y + 18, string=f"Awareness: {self.engine.player.fighter.awareness}"
         )
+        console.print(
+            x=x + 1, y=y + 19, string=f"Charisma: {self.engine.player.fighter.charisma}"
+        )
+
+
+
+class ConditionsViewerEventHandler(AskUserEventHandler):
+    TITLE = "Active Conditions"
+
+    def on_render(self, console: tcod.Console) -> None:
+        super().on_render(console)
+
+        if self.engine.player.x <= 30:
+            x = 40
+        else:
+            x = 0
+
+        y = 0
+
+        width = len(self.TITLE) + 15
+        height = len(self.engine.player.status_effect_manager.active_effects) + 2
+
+        console.draw_frame(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            title=self.TITLE,
+            clear=True,
+            fg=(255, 255, 255),
+            bg=(0, 0, 0),
+        )
+
+        for i, effect in enumerate(self.engine.player.status_effect_manager.active_effects):
+            duration_str = f" ({effect.duration} turns left)"
+            console.print(x=x + 1, y=y + i + 1, string=effect.name + duration_str)
+
+

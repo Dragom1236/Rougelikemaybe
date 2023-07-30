@@ -35,7 +35,7 @@ class BaseAI(Action):
                                   radius=self.entity.fighter.sight_range, )
         visible_actors = []
         for actor in self.entity.gamemap.actors:
-            if visible_map[actor.x, actor.y]:
+            if visible_map[actor.x, actor.y] and actor is not self.entity:
                 visible_actors.append(actor)
         return visible_actors
 

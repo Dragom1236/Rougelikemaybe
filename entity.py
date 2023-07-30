@@ -4,8 +4,6 @@ import copy
 import math
 from typing import Tuple, TypeVar, TYPE_CHECKING, Optional, Type, Union
 
-from components.Status import StatusEffectManager
-from components.level import Level
 from render_order import RenderOrder
 
 if TYPE_CHECKING:
@@ -14,6 +12,12 @@ if TYPE_CHECKING:
     from components.fighter import Fighter
     from components.inventory import Inventory
     from components.consumable import Consumable
+    from components.equippable import Equippable
+    from components.equipment import Equipment
+    from components.Status import StatusEffectManager
+    from components.conditions import ConditionManager
+    from components.SkillComponent import Abilities
+    from components.level import Level
 
 T = TypeVar("T", bound="Entity")
 
@@ -97,7 +101,10 @@ class Actor(Entity):
             fighter: Fighter,
             inventory: Inventory,
             level: Level,
+            equipment: Equipment,
+            conditions_manager: ConditionManager,
             status_effect_manager: StatusEffectManager,
+            abilities: Abilities,
     ):
         super().__init__(x=x, y=y, char=char, color=color, name=name, blocks_movement=True,
                          render_order=RenderOrder.ACTOR)
@@ -112,6 +119,12 @@ class Actor(Entity):
         self.status_effect_manager.parent = self
         self.level = level
         self.level.parent = self
+        self.conditions_manager = conditions_manager
+        self.conditions_manager.parent = self
+        self.abilities = abilities
+        self.abilities.parent = self
+        self.equipment: Equipment = equipment
+        self.equipment.parent = self
 
     @property
     def is_alive(self) -> bool:
@@ -128,7 +141,8 @@ class Item(Entity):
             char: str = "?",
             color: Tuple[int, int, int] = (255, 255, 255),
             name: str = "<Unnamed>",
-            consumable: Consumable,
+            consumable: Optional[Consumable] = None,
+            equippable: Optional[Equippable] = None,
     ):
         super().__init__(
             x=x,
@@ -141,4 +155,10 @@ class Item(Entity):
         )
 
         self.consumable = consumable
-        self.consumable.parent = self
+        if self.consumable:
+            self.consumable.parent = self
+
+        self.equippable = equippable
+
+        if self.equippable:
+            self.equippable.parent = self

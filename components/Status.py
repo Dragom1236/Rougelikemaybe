@@ -5,8 +5,11 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np  # type: ignore
 
+
+
 if TYPE_CHECKING:
     from entity import Actor
+    from components.conditions import Condition
 
 from components.base_component import BaseComponent
 
@@ -59,6 +62,7 @@ class StatusEffect:
                  duration: int,
                  modifier_data: dict,
                  cot_effect_data: dict,
+                 conditions:List[Condition] = None,
                  permanent: bool = False,
                  can_delay: bool = False,
                  delay: int = 0):
@@ -67,6 +71,7 @@ class StatusEffect:
         self.modifier_data = modifier_data.copy()
         self.cot_effect_data = cot_effect_data.copy()
         self.stacks = 1
+        self.conditions = conditions
         self.permanent = permanent
         self.can_delay = can_delay
         self.delay = delay
@@ -79,6 +84,9 @@ class StatusEffect:
             elif key == "strength_modifier":
                 entity.fighter.modify_strength(value)
             # Add more conditions here to handle other modifier types
+        if self.conditions:
+            for condition in self.conditions:
+                entity.conditions_manager.add_condition(condition)
 
     def remove_effect(self, entity: Actor):
         # Remove the modifiers from the parent.

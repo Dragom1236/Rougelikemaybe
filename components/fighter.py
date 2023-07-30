@@ -130,7 +130,14 @@ class Fighter(BaseComponent):
 
     @property
     def defense(self) -> int:
-        return 0
+        return self.defense_bonus
+
+    @property
+    def defense_bonus(self) -> int:
+        if self.parent.equipment:
+            return self.parent.equipment.defense_bonus
+        else:
+            return 0
 
     @property
     def power(self) -> int:
