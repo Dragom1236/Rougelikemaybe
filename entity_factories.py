@@ -1,10 +1,11 @@
 import components
-from components import consumable,equippable_factories
+from components import consumable, equippable_factories
 from components.SkillComponent import Abilities
 from components.Status import StatusEffectManager
 from components.ai import HostileEnemy, FleeingAI
 from components.conditions import ConditionManager
 from components.equipment import Equipment
+from components.equippable_factories import arrow
 from components.fighter import Fighter
 from components.inventory import Inventory
 from components.level import Level
@@ -24,7 +25,6 @@ player = Actor(
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
-
 
     # strength default is 10, constitution is 10 or 20, awareness is 16
 )
@@ -67,7 +67,7 @@ troll = Actor(
                     charisma=3, agility=4),
     inventory=Inventory(capacity=3),
     status_effect_manager=StatusEffectManager(),
-    level=Level(level_up_base=250,xp_given=100),
+    level=Level(level_up_base=250, xp_given=100),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
@@ -77,7 +77,7 @@ health_potion = Item(
     char="!",
     color=(127, 0, 255),
     name="Health Potion",
-    consumable=consumable.HealingConsumable(amount=4,effect=regeneration_effect),
+    consumable=consumable.HealingConsumable(amount=4, effect=regeneration_effect),
 )
 lightning_scroll = Item(
     char="~",
@@ -104,7 +104,7 @@ dagger = Item(
     char="/", color=(0, 191, 255), name="Dagger", equippable=components.equippable_factories.dagger
 )
 
-sword = Item(char="/", color=(0, 191, 255), name="Sword", equippable=equippable_factories.iron_sword)
+sword = Item(char="/", color=(191, 191, 191), name="Sword", equippable=equippable_factories.iron_sword)
 
 leather_armor = Item(
     char="[",
@@ -116,3 +116,11 @@ leather_armor = Item(
 chain_mail = Item(
     char="[", color=(139, 69, 19), name="Chain Mail", equippable=equippable_factories.chainmail_armor
 )
+
+Basic_Quiver = Item(
+    char="(", color=(80, 42, 42), name="Quiver", equippable=equippable_factories.quiver
+)
+
+Wooden_Arrow = Item(char=",", color=(90, 69, 19), name="Arrow", ammo=arrow)
+
+Bow = Item(char=")", color=(120, 60, 60), name="Bow", equippable=equippable_factories.wooden_bow)

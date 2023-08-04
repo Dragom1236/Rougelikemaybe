@@ -1,20 +1,17 @@
 from __future__ import annotations
 
+import lzma
 import random
 from typing import TYPE_CHECKING
 
 import dill
+from tcod.console import Console
+from tcod.map import compute_fov
 
 import color
 import exceptions
-from effect_factories import poison_effect, regeneration_effect
-from tcod.console import Console
-from tcod.context import Context
-from tcod.map import compute_fov
-import lzma
-import pickle
-from message_log import MessageLog
 import render_functions
+from message_log import MessageLog
 
 if TYPE_CHECKING:
     from entity import Actor
@@ -47,6 +44,8 @@ class Engine:
                     pass  # Ignore impossible action exceptions from AI.
                 # parent.status_effect_manager.add_effect(regeneration_effect)
                 entity.status_effect_manager.update_effects()
+                entity.conditions_manager.reduce_conditions_duration()
+                entity.abilities.update_cooldowns()
                 entity.fighter.time = entity.fighter.max_time
 
     def update_fov(self) -> None:
@@ -113,10 +112,19 @@ class Engine:
         render_functions.render_names_at_mouse_location(
             console=console, x=21, y=44, engine=self
         )
+        if self.player.equipment.weapon and self.player.equipment.weapon.equippable.type == "Ranged":
+            # Print ammo amount, then below the ammo name and damage
+            if self.player.equipment.weapon.equippable.category == "Bow":
+                if self.player.equipment.back:
+                    quiver = self.player.equipment.back
+                    console.print(x=62, y=46,
+                                  string=f'''Ammo:{quiver.equippable.num_of_ammo}/{quiver.equippable.capacity}''')
+                    if quiver.equippable.items:
+                        console.print(x=62, y=47, string=f"Active Ammo: {quiver.equippable.items[0].name}")
+                        console.print(x=62, y=48, string=f"Damage:{quiver.equippable.items[0].ammo.damage}")
 
     def save_as(self, filename: str) -> None:
         """Save this Engine instance as a compressed file."""
         save_data = lzma.compress(dill.dumps(self))
         with open(filename, "wb") as f:
             f.write(save_data)
-

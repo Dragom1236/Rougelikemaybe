@@ -12,30 +12,30 @@ if TYPE_CHECKING:
 class Equipment(BaseComponent):
     parent: Actor
 
-    def __init__(self, weapon: Optional[Item] = None, armor: Optional[Item] = None):
+    def __init__(self, weapon: Optional[Item] = None, armor: Optional[Item] = None, ):
         self.weapon = weapon
         self.armor = armor
+        self.back: Optional[Item] = None
 
     @property
     def damage_range(self):
-        if self.weapon is not None and self.weapon.equippable is not None:
+        if self.weapon and self.weapon.equippable:
             return self.weapon.equippable.damage_range()
         else:
             return "N/A"
-
 
     @property
     def defense_bonus(self) -> int:
         bonus = 0
 
-        if self.armor is not None and self.armor.equippable is not None and \
+        if self.armor and self.armor.equippable and \
                 self.armor.equippable.equipment_type == EquipmentType.ARMOR:
             bonus += self.armor.equippable.defense_bonus
 
         return bonus
 
     def item_is_equipped(self, item: Item) -> bool:
-        return self.weapon == item or self.armor == item
+        return self.weapon == item or self.armor == item or self.back == item
 
     def unequip_message(self, item_name: str) -> None:
         self.parent.gamemap.engine.message_log.add_message(
@@ -72,6 +72,11 @@ class Equipment(BaseComponent):
                 and equippable_item.equippable.equipment_type == EquipmentType.WEAPON
         ):
             slot = "weapon"
+        elif (
+                equippable_item.equippable
+                and equippable_item.equippable.equipment_type == EquipmentType.Container
+        ):
+            slot = "back"
         else:
             slot = "armor"
 

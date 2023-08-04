@@ -28,7 +28,7 @@ def is_point_inside_corridor(point: Tuple[int, int], corridor: Corridor) -> bool
 def dir_line_checker(start: Tuple[int, int], direction: Tuple[int, int], length: int,
                      existing_rooms: List[RectangularRoom], existing_corridors: List[Corridor]) -> List or None:
     line_points = directional_line(start, direction, length)
-    id_string = ""
+    ""
     intersected_room_or_corridor = None
     intersection_point = None
 
@@ -37,7 +37,7 @@ def dir_line_checker(start: Tuple[int, int], direction: Tuple[int, int], length:
             if is_point_inside_room(point, room):
                 intersected_room_or_corridor = room
                 intersection_point = point
-                id_string = "room"
+                "room"
                 break
         if intersected_room_or_corridor is not None:
             break
@@ -46,7 +46,7 @@ def dir_line_checker(start: Tuple[int, int], direction: Tuple[int, int], length:
             if is_point_inside_corridor(point, corridor):
                 intersected_room_or_corridor = corridor
                 intersection_point = point
-                id_string = "corridor"
+                "corridor"
                 break
         if intersected_room_or_corridor is not None:
             break

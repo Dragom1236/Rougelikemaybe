@@ -22,13 +22,16 @@ class BaseAI(Action):
         self.flee_map = FleeMap(entity)  # Not used in HostileEnemy, but useful in other AIs
 
     def vision_compute(self) -> List[Entity]:
-        visible_map = compute_fov(self.entity.gamemap.tiles["transparent"], (self.entity.x, self.entity.y),
-                                  radius=self.entity.fighter.sight_range, )
+        visible_map = self.return_visible_map()
         visible_entities = []
         for entity in self.entity.gamemap.entities:
             if visible_map[entity.x, entity.y]:
                 visible_entities.append(entity)
         return visible_entities
+
+    def return_visible_map(self):
+        return compute_fov(self.entity.gamemap.tiles["transparent"], (self.entity.x, self.entity.y),
+                           radius=self.entity.fighter.sight_range, )
 
     def actors_search(self) -> List[Actor]:
         visible_map = compute_fov(self.entity.gamemap.tiles["transparent"], (self.entity.x, self.entity.y),
@@ -312,6 +315,7 @@ class FleeMap(ApproachMap):
         path = self.process_map(self.flee_map)
         return [(index[0], index[1]) for index in path]
 
+
 # TODO: Implement Desire Driven Dijkstra maps.
 # TODO: Consider an AI State Machine
 
@@ -322,7 +326,7 @@ class ConfusedEnemy(BaseAI):
     """
 
     def __init__(
-        self, entity: Actor, previous_ai: Optional[BaseAI], turns_remaining: int
+            self, entity: Actor, previous_ai: Optional[BaseAI], turns_remaining: int
     ):
         super().__init__(entity)
 
@@ -355,4 +359,4 @@ class ConfusedEnemy(BaseAI):
 
             # The actor will either try to move or attack in the chosen random direction.
             # Its possible the actor will just bump into the wall, wasting a turn.
-            return BumpAction(self.entity, direction_x, direction_y,).perform()
+            return BumpAction(self.entity, direction_x, direction_y, ).perform()

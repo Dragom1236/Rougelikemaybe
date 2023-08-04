@@ -15,6 +15,7 @@ import entity_factories
 import input_handlers
 from engine import Engine
 from game_map import GameWorld
+from skill_factories import Fireball, PowerShot
 
 # Load the background image and remove the alpha channel.
 background_image = tcod.image.load("dungeon.png")[:, :, :3]
@@ -55,17 +56,29 @@ def new_game() -> Engine:
     engine.message_log.add_message(
         "Hello and welcome, adventurer, to yet another dungeon!", color.welcome_text
     )
-    dagger = copy.deepcopy(entity_factories.dagger)
+    # dagger = copy.deepcopy(entity_factories.dagger)
+    bow = copy.deepcopy(entity_factories.Bow)
     leather_armor = copy.deepcopy(entity_factories.leather_armor)
+    quiver = copy.deepcopy(entity_factories.Basic_Quiver)
 
-    dagger.parent = player.inventory
+    # dagger.parent = player.inventory
     leather_armor.parent = player.inventory
+    quiver.parent = player.inventory
+    bow.parent = player.inventory
 
-    player.inventory.items.append(dagger)
-    player.equipment.toggle_equip(dagger, add_message=False)
+    # player.inventory.items.append(dagger)
+    # player.equipment.toggle_equip(dagger, add_message=False)
+    player.inventory.items.append(bow)
+    player.equipment.toggle_equip(bow, add_message=False)
+
+    player.inventory.items.append(quiver)
+    player.equipment.toggle_equip(quiver, add_message=False)
 
     player.inventory.items.append(leather_armor)
     player.equipment.toggle_equip(leather_armor, add_message=False)
+
+    player.abilities.add_active_skill(Fireball)
+    player.abilities.add_active_skill(PowerShot)
     return engine
 
 

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 import color
 from components.base_component import BaseComponent
 from render_order import RenderOrder
-from input_handlers import GameOverEventHandler
 
 if TYPE_CHECKING:
     from entity import Actor
@@ -76,7 +75,7 @@ class Fighter(BaseComponent):
 
     def take_damage(self, amount: int) -> None:
         self.hp -= amount
-        
+
     @property
     def hp(self) -> int:
         return self._hp

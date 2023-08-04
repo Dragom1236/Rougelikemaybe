@@ -4,6 +4,9 @@ import copy
 import math
 from typing import Tuple, TypeVar, TYPE_CHECKING, Optional, Type, Union
 
+from tcod.map import compute_fov
+
+from components.Ammo import Ammo
 from render_order import RenderOrder
 
 if TYPE_CHECKING:
@@ -12,7 +15,7 @@ if TYPE_CHECKING:
     from components.fighter import Fighter
     from components.inventory import Inventory
     from components.consumable import Consumable
-    from components.equippable import Equippable
+    from components.equippable import Equippable, Accessory, RangedWeapon, Armor, Weapon, Bow, Container
     from components.equipment import Equipment
     from components.Status import StatusEffectManager
     from components.conditions import ConditionManager
@@ -131,6 +134,33 @@ class Actor(Entity):
         """Returns True as long as this actor can perform actions."""
         return bool(self.ai)
 
+    def has_direct_los(self, target_x: int, target_y: int):
+        # Perform ray casting to check for direct line of sight
+        visible_map = compute_fov(self.gamemap.tiles["transparent"], (self.x, self.y),
+                                  radius=self.fighter.sight_range, )
+        if target_x == self.x and target_y == self.y:
+            return False
+        dx = int(target_x - self.x)
+        dy = int(target_y - self.y)
+        steps = max(abs(dx), abs(dy))
+        x_step = dx / steps
+        y_step = dy / steps
+
+        x, y = self.x, self.y
+
+        for _ in range(steps):
+            x += x_step
+            y += y_step
+
+            # Check if there's an obstacle at (x, y), if yes, return False
+            if self.gamemap.is_tile_blocked(x, y):
+                return False
+            if not visible_map[int(x), int(y)]:
+                return False
+
+        # If the loop completes without finding an obstacle, return True
+        return True
+
 
 class Item(Entity):
     def __init__(
@@ -142,7 +172,8 @@ class Item(Entity):
             color: Tuple[int, int, int] = (255, 255, 255),
             name: str = "<Unnamed>",
             consumable: Optional[Consumable] = None,
-            equippable: Optional[Equippable] = None,
+            equippable: Optional[Union[Equippable, Weapon, Armor, Accessory, RangedWeapon, Bow, Container]] = None,
+            ammo: Optional[Ammo] = None
     ):
         super().__init__(
             x=x,
@@ -162,3 +193,6 @@ class Item(Entity):
 
         if self.equippable:
             self.equippable.parent = self
+        self.ammo = ammo
+        if self.ammo:
+            self.ammo.parent = self

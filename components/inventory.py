@@ -23,3 +23,11 @@ class Inventory(BaseComponent):
         item.place(self.parent.x, self.parent.y, self.gamemap)
 
         self.engine.message_log.add_message(f"You dropped the {item.name}.")
+
+    @property
+    def ammo(self):
+        ammo = []
+        for item in self.items:
+            if item.ammo:
+                ammo.append(item)
+        return ammo

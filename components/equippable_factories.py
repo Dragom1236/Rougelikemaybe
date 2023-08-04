@@ -1,6 +1,7 @@
 # Create Melee Weapon - Iron Sword
-from components.equippable import MeleeWeapon, Bow, Staff, Orb, Wand, Armor
-from skill_factories import fireball_aoe
+from components.Ammo import Ammo
+from components.equippable import MeleeWeapon, Bow, Staff, Orb, Wand, Armor, Container
+from skill_factories import Fireball
 
 dagger = MeleeWeapon(rarity="common", damage_dice=(1, 6), time_cost=2)
 iron_sword = MeleeWeapon(rarity="common", damage_dice=(2, 6), time_cost=2)
@@ -14,10 +15,14 @@ staff = Staff(rarity="uncommon", damage_dice=(1, 4), mp_cost=5)
 # Create Orb - Mage Orb
 mage_orb = Orb(rarity="rare", damage_dice=(2, 3), mp_cost=10)
 
-fireball_wand = Wand(rarity="epic", Skills=fireball_aoe)
+fireball_wand = Wand(rarity="epic", Skills=Fireball)
+
+quiver = Container(rarity="common", capacity=10)
 
 # Create Armor - Leather Armor
 leather_armor = Armor(rarity="common", defense_bonus=2)
 
 # Create Armor - Chainmail Armor
 chainmail_armor = Armor(rarity="uncommon", defense_bonus=4)
+
+arrow = Ammo(5, "Arrow", stacks=6)

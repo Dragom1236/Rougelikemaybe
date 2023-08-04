@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np  # type: ignore
 
-
-
 if TYPE_CHECKING:
     from entity import Actor
     from components.conditions import Condition
@@ -62,7 +60,7 @@ class StatusEffect:
                  duration: int,
                  modifier_data: dict,
                  cot_effect_data: dict,
-                 conditions:List[Condition] = None,
+                 conditions: List[Condition] = None,
                  permanent: bool = False,
                  can_delay: bool = False,
                  delay: int = 0):

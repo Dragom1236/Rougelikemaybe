@@ -53,6 +53,13 @@ class GameMap:
             if isinstance(entity, Actor) and entity.is_alive
         )
 
+    def is_tile_blocked(self, x: int, y: int):
+        x, y = int(x), int(y)
+        if self.engine.game_map.tiles["transparent"][x, y]:
+            return False
+        else:
+            return True
+
     def get_blocking_entity_at_location(
             self, location_x: int, location_y: int,
     ) -> Optional[Entity]:
@@ -146,16 +153,14 @@ class GameWorld:
         if self.current_floor != 1:
             self.current_floor -= 1
             self.engine.game_map = self.maps[self.current_floor]
-            self.engine.player.place(*self.engine.game_map.downstairs_location,self.engine.game_map)
+            self.engine.player.place(*self.engine.game_map.downstairs_location, self.engine.game_map)
         else:
             raise Impossible("You are already on the top most floor.")
 
     def move_down(self):
-        if (self.current_floor+1) in self.maps:
+        if (self.current_floor + 1) in self.maps:
             self.current_floor += 1
             self.engine.game_map = self.maps[self.current_floor]
             self.engine.player.place(*self.engine.game_map.upstairs_location, self.engine.game_map)
         else:
             self.generate_floor()
-
-

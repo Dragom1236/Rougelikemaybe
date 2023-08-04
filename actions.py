@@ -95,6 +95,31 @@ class ActionWithDirection(Action):
         raise NotImplementedError()
 
 
+class ActionWithLocation(Action):
+    def __init__(self, entity: Actor, x: int, y: int, time_cost: int = 0):
+        super().__init__(entity, time_cost=time_cost)
+        self.x = x
+        self.y = y
+
+    @property
+    def dest_xy(self) -> Tuple[int, int]:
+        """Returns this actions destination."""
+        return self.x, self.y
+
+    @property
+    def blocking_entity(self) -> Optional[Entity]:
+        """Return the blocking parent at this actions destination.."""
+        return self.engine.game_map.get_blocking_entity_at_location(*self.dest_xy)
+
+    @property
+    def target_actor(self) -> Optional[Actor]:
+        """Return the actor at this actions destination."""
+        return self.engine.game_map.get_actor_at_location(*self.dest_xy)
+
+    def perform(self) -> None:
+        raise NotImplementedError()
+
+
 class WaitAction(Action):
     def perform(self) -> None:
         self.time_cost = self.entity.fighter.time
@@ -193,11 +218,12 @@ class MeleeWeaponAction(ActionWithDirection):
 class BumpAction(ActionWithDirection):
     def perform(self) -> None:
         self.time_cost = 0
-        weapon_action = MeleeWeaponAction(self.entity,self.dx,self.dy)
+        if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.type == "Melee":
+            weapon_action = MeleeWeaponAction(self.entity, self.dx, self.dy)
         melee_action = MeleeAction(self.entity, self.dx, self.dy)
         movement_action = MovementAction(self.entity, self.dx, self.dy)
         if self.target_actor:
-            if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.attack_type =="melee":
+            if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.attack_type == "melee":
                 if self.entity.fighter.time >= weapon_action.time_cost:
                     return weapon_action.perform()
                 else:
@@ -271,10 +297,27 @@ class PickupAction(Action):
                         raise exceptions.Impossible("Your inventory is full.")
 
                     self.engine.game_map.entities.remove(item)
-                    item.parent = self.entity.inventory
-                    inventory.items.append(item)
+                    if item.ammo:
+                        exists_ammo = False
+                        for existing_item in inventory.items:
+                            if item.name == existing_item.name:
+                                existing_item.ammo.stacks += item.ammo.stacks
+                                exists_ammo = True
+                                break
+                        if exists_ammo:
+                            pass
+                        else:
+                            item.parent = self.entity.inventory
+                            inventory.items.append(item)
+                        if item.ammo.stacks > 1:
+                            self.engine.message_log.add_message(f"You picked up {item.ammo.stacks} {item.name}s!")
+                        else:
+                            self.engine.message_log.add_message(f"You picked up the {item.name}!")
 
-                    self.engine.message_log.add_message(f"You picked up the {item.name}!")
+                    else:
+                        item.parent = self.entity.inventory
+                        inventory.items.append(item)
+                        self.engine.message_log.add_message(f"You picked up the {item.name}!")
                     self.entity.fighter.time = self.entity.fighter.time - self.cost
                     return
         else:
@@ -292,3 +335,124 @@ class DropItem(ItemAction):
             self.entity.inventory.drop(self.item)
         else:
             raise exceptions.Impossible("You do not have enough time.")
+
+
+class ExecuteAction(Action):
+    def __init__(self, entity, skill, xy=None):
+        super().__init__(entity)
+        self.skill = skill
+        self.xy = xy
+
+    def perform(self):
+        if self.entity.fighter.time < self.time_cost:
+            raise exceptions.Impossible("Not enough time to use this skill.")
+        print(self.skill.remaining_cooldown)
+        if self.skill.on_cooldown():
+            raise exceptions.Impossible("Skill is on cooldown.")
+        if not self.skill.can_afford(self.entity):
+            raise exceptions.Impossible("Not enough resources (MP, SP, SE) to use this skill.")
+        self.skill.activation(self.xy)
+
+
+class LoadAction(Action):
+    def __init__(self, entity, item):
+        super().__init__(entity, time_cost=entity.equipment.weapon.equippable.reload_time)
+        self.item = item
+
+    def perform(self):
+        weapon = self.entity.equipment.weapon
+        ammo = self.item.ammo
+        if weapon.equippable.category == "Bow" and ammo.type != "Arrow":
+            raise exceptions.Impossible("Wrong Ammo Type")
+        if weapon.equippable.category == "Gun" and ammo.type != "Bullet":
+            raise exceptions.Impossible("Wrong Ammo Type.")
+        elif weapon.equippable.category == "Crossbow" and ammo.type != "Bolt":
+            raise exceptions.Impossible("Wrong Ammo Type.")
+        if weapon.equippable.ammo_full:
+            raise exceptions.Impossible("Ammo is already full.")
+        if weapon.equippable.category == "Bow" and not self.entity.equipment.back:
+            raise exceptions.Impossible("No quiver.")
+        elif self.entity.equipment.back.equippable.ammo_full:
+            raise exceptions.Impossible("Quiver is fully stocked.")
+
+        # Get the number of ammo needed.
+        self.entity.inventory.items.remove(self.item)
+        if weapon.equippable.category == "Bow":
+            required_ammo = self.entity.equipment.back.equippable.capacity - self.entity.equipment.back.equippable.num_of_ammo
+            if ammo.stacks > required_ammo:
+                fragment = ammo.fragment(required_ammo)
+                self.entity.inventory.items.append(fragment)
+            self.entity.equipment.back.equippable.items.append(self.item)
+        else:
+            required_ammo = weapon.equippable.max_ammo - weapon.equippable.num_of_ammo
+            if ammo.stacks > required_ammo:
+                fragment = ammo.fragment(required_ammo)
+                self.entity.inventory.items.append(fragment)
+            weapon.equippable.current_ammo.append(self.item)
+
+
+class RangedWeaponAction(ActionWithLocation):
+    def __init__(self, entity, x, y):
+        super().__init__(entity, x, y, time_cost=0)
+
+    def perform(self) -> None:
+        if not self.entity.has_direct_los(self.x, self.y):
+            raise exceptions.Impossible("You don't have a direct line of fire.")
+        weapon = self.entity.equipment.weapon
+        if weapon and weapon.equippable.type == "Ranged":
+            if weapon.equippable.category == "Bow":
+                return BowWeaponAction(self.entity, self.x, self.y).perform()
+            elif weapon.equippable.category == "Gun":
+                pass
+            elif weapon.equippable.category == "Crossbow":
+                pass
+
+        else:
+            raise exceptions.Impossible("You are wielding a non-ranged weapon(or not wielding a weapon).")
+
+
+class BowWeaponAction(ActionWithLocation):
+    def perform(self) -> None:
+        self.time_cost = self.entity.equipment.weapon.equippable.time_cost
+        if self.entity.fighter.time < self.time_cost:
+            raise exceptions.Impossible("Not enough time.")
+        target = self.target_actor
+        print(target)
+        if not target:
+            raise exceptions.Impossible("Nothing to attack.")
+        elif target == self.entity:
+            raise exceptions.Impossible("You can't target yourself.")
+        for item in self.entity.equipment.back.equippable.items:
+            if item.ammo.stacks <= 0:
+                self.entity.equipment.back.equippable.items.remove(item)
+        if not self.entity.equipment.back.equippable.items:
+            raise exceptions.Impossible("No ammo.")
+        weapon = self.entity.equipment.weapon
+        item = self.entity.equipment.back.equippable.items[0]
+        ammo = item.ammo
+        ammo.stacks -= 1
+        if ammo.stacks <= 0:
+            self.entity.equipment.back.equippable.items.remove(item)
+        print(ammo)
+        damage = weapon.equippable.roll_damage() + ammo.damage + target.fighter.defense
+        print("Damage", damage)
+
+        attack_desc = f"{self.entity.name.capitalize()} shoots {target.name}"
+        if self.entity is self.engine.player:
+            attack_color = color.player_atk
+        else:
+            attack_color = color.enemy_atk
+
+        if damage > 0:
+            self.engine.message_log.add_message(
+                f"{attack_desc} for {damage} hit points.", attack_color
+            )
+            target.fighter.hp -= damage
+            if not target.is_alive and target is not self.engine.player:
+                self.entity.level.add_xp(target.level.xp_given)
+        else:
+            self.engine.message_log.add_message(
+                f"{attack_desc} but does no damage.", attack_color
+            )
+
+        self.entity.fighter.time -= self.time_cost

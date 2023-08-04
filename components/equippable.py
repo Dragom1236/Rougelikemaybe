@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import TYPE_CHECKING, Dict, List, Type
+from typing import TYPE_CHECKING, Dict, List
 
 from components.base_component import BaseComponent
-
 from equipment_types import EquipmentType
 
 if TYPE_CHECKING:
@@ -77,10 +76,12 @@ class Accessory(Equippable):
 
 
 class MeleeWeapon(Weapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
         self.attack_type = "melee"
+        self.type = "Melee"
+        self.category = None
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating based on the melee weapon's properties
@@ -88,26 +89,41 @@ class MeleeWeapon(Weapon):
 
 
 class RangedWeapon(Weapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float, max_ammo: int, reload_time: float):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int, max_ammo: int,
+                 reload_time: float | int):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
         self.attack_type = "ranged"
         self.max_ammo = max_ammo
         self.reload_time = reload_time
-        self.current_ammo = max_ammo
+        self.current_ammo: List[Item] = []
+        self.type = "Ranged"
+        self.category = None
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating based on the ranged weapon's properties
         pass
 
+    @property
+    def num_of_ammo(self):
+        num_ammo = 0
+        for ammo in self.current_ammo:
+            num_ammo += ammo.ammo.stacks
+        return num_ammo
+
+    @property
+    def ammo_full(self):
+        num_ammo = self.num_of_ammo
+        if num_ammo >= self.max_ammo:
+            return True
+        else:
+            return False
+
 
 class Bow(RangedWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int]):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, max_ammo=1, reload_time=0)
-
-    def load_ammo(self) -> None:
-        # Bows instantly load their ammo, so no additional implementation needed
-        pass
+        self.category = "Bow"
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for a bow
@@ -115,14 +131,12 @@ class Bow(RangedWeapon):
 
 
 class Gun(RangedWeapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, reload_time: float, shot_time: float):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, reload_time: float | int,
+                 shot_time: float | int):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=0, max_ammo=max_ammo,
                          reload_time=reload_time)
         self.shot_time = shot_time
-
-    def load_ammo(self) -> None:
-        if self.current_ammo < self.max_ammo:
-            self.current_ammo += 1
+        self.category = "Gun"
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for a gun
@@ -132,10 +146,7 @@ class Gun(RangedWeapon):
 class Crossbow(RangedWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int]):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=2, max_ammo=1, reload_time=2)
-
-    def load_ammo(self) -> None:
-        if self.current_ammo < self.max_ammo:
-            self.current_ammo += 1
+        self.category = "Crossbow"
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for a crossbow
@@ -148,6 +159,7 @@ class MagicWeapon(Weapon):
         self.time_cost = time_cost
         self.attack_type = "magic"
         self.mp_cost = mp_cost
+        self.category = None
 
 
 class Staff(MagicWeapon):
@@ -197,6 +209,7 @@ class Wand(MagicWeapon):
         # Wands don't have damage die, so they can't deal damage.
         return 0
 
+
 # class Dagger(Equippable):
 #     def __init__(self) -> None:
 #         super().__init__(equipment_type=EquipmentType.WEAPON, power_bonus=2)
@@ -215,3 +228,25 @@ class Wand(MagicWeapon):
 # class ChainMail(Equippable):
 #     def __init__(self) -> None:
 #         super().__init__(equipment_type=EquipmentType.ARMOR, defense_bonus=3)
+
+class Container(Equippable):
+    def __init__(self, rarity: str, capacity: int = 1, category: str = None):
+        super().__init__(equipment_type=EquipmentType.Container, rarity=rarity)
+        self.capacity = capacity
+        self.items: List[Item] = []
+        self.category = category
+
+    @property
+    def num_of_ammo(self):
+        num_ammo = 0
+        for ammo in self.items:
+            num_ammo += ammo.ammo.stacks
+        return num_ammo
+
+    @property
+    def ammo_full(self):
+        num_ammo = self.num_of_ammo
+        if num_ammo >= self.capacity:
+            return True
+        else:
+            return False

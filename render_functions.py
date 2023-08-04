@@ -40,7 +40,6 @@ def render_extra_bar(
             x=xpos, y=43, width=bar_width, height=1, ch=1, bg=fill_color
         )
 
-
     if render_text == "Time" and current_value <= maximum_value / 2:
         console.print(
             x=xpos + 1, y=43, string=f"{render_text}: {current_value}/{maximum_value}", fg=color.red
@@ -54,8 +53,9 @@ def render_extra_bar(
             x=xpos + 1, y=43, string=f"{render_text}: {current_value}/{maximum_value}", fg=color.bar_text
         )
 
+
 def render_dungeon_level(
-    console: Console, dungeon_level: int, location: Tuple[int, int]
+        console: Console, dungeon_level: int, location: Tuple[int, int]
 ) -> None:
     """
     Render the level the player is currently on, at the given location.

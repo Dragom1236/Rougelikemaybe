@@ -1,28 +1,27 @@
 from __future__ import annotations
 
 import os
+from typing import Optional, TYPE_CHECKING, Callable, Tuple, Union
 
 import tcod.event
-from typing import Optional, TYPE_CHECKING, Callable, Tuple, Union, List
-from tcod import libtcodpy
 import tcod.event
+from tcod import libtcodpy
 
 import actions
+import color
+import exceptions
 from actions import (
     Action,
     BumpAction,
     WaitAction,
     PickupAction
 )
-
-import color
-import exceptions
-
-from effect_factories import poison_effect, regeneration_effect
+from equipment_types import EquipmentType
 
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Item, Actor
+    from entity import Item
+    from components.SkillComponent import ActiveSkill
 
 MOVE_KEYS = {
     # Arrow keys.
@@ -128,6 +127,8 @@ class EventHandler(BaseEventHandler):
         if self.engine.player.fighter.time <= 0:
             # self.engine.player.status_effect_manager.add_effect(regeneration_effect)
             self.engine.player.status_effect_manager.update_effects()
+            self.engine.player.abilities.update_cooldowns()
+            self.engine.player.conditions_manager.reduce_conditions_duration()
             self.engine.player.fighter.time = self.engine.player.fighter.max_time
             self.engine.handle_enemy_turns()
             self.engine.update_fov()  # Update the FOV before the players next action.
@@ -171,6 +172,8 @@ class MainGameEventHandler(EventHandler):
             action = PickupAction(player)
         elif key == tcod.event.KeySym.i:
             return InventoryActivateHandler(self.engine)
+        elif key == tcod.event.KeySym.a:
+            return AbilitiesActivateHandler(self.engine)
         elif key == tcod.event.KeySym.d:
             return InventoryDropHandler(self.engine)
         elif key == tcod.event.KeySym.c and modifier & (
@@ -184,6 +187,15 @@ class MainGameEventHandler(EventHandler):
 
         # No valid key was pressed
         return action
+
+    def ev_mousebuttondown(self, event: tcod.event.MouseButtonDown) -> Optional[ActionOrHandler]:
+        super().ev_mousebuttondown(event)
+        # Check if the event was a left mouse button click
+        if event.button == 1:
+            # Check if the player has a ranged weapon equipped
+            if self.engine.player.equipment.weapon and self.engine.player.equipment.weapon.equippable.type == "Ranged":
+                # Create the ranged weapon action and return it with the target location
+                return actions.RangedWeaponAction(self.engine.player, event.tile.x, event.tile.y)
 
 
 class GameOverEventHandler(EventHandler):
@@ -336,11 +348,20 @@ class InventoryEventHandler(AskUserEventHandler):
             for i, item in enumerate(self.engine.player.inventory.items):
                 item_key = chr(ord("a") + i)
                 is_equipped = self.engine.player.equipment.item_is_equipped(item)
-
                 item_string = f"({item_key}) {item.name}"
-
-                if is_equipped:
+                if item.ammo:
+                    if item.ammo.stacks > 1:
+                        item_string = f"({item_key}) {item.ammo.stacks} {item.name}s"
+                elif item.equippable:
+                    if item.equippable.equipment_type == EquipmentType.Container:
+                        if is_equipped:
+                            item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity} (E)"
+                        else:
+                            item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
+                elif is_equipped:
                     item_string = f"{item_string} (E)"
+                else:
+                    item_string = f"({item_key}) {item.name}"
 
                 console.print(x + 1, y + i + 1, item_string)
         else:
@@ -376,6 +397,8 @@ class InventoryActivateHandler(InventoryEventHandler):
             return item.consumable.get_action(self.engine.player)
         elif item.equippable:
             return actions.EquipAction(self.engine.player, item)
+        elif item.ammo and self.engine.player.equipment.weapon.equippable.type == "Ranged":
+            return actions.LoadAction(self.engine.player, item)
         else:
             return None
 
@@ -713,7 +736,6 @@ class CharacterScreenEventHandler(AskUserEventHandler):
         )
 
 
-
 class ConditionsViewerEventHandler(AskUserEventHandler):
     TITLE = "Active Conditions"
 
@@ -746,3 +768,79 @@ class ConditionsViewerEventHandler(AskUserEventHandler):
             console.print(x=x + 1, y=y + i + 1, string=effect.name + duration_str)
 
 
+class AbilitiesEventHandler(AskUserEventHandler):
+    """This handler lets the user select an item.
+
+    What happens then depends on the subclass.
+    """
+
+    TITLE = "<missing title>"
+
+    def on_render(self, console: tcod.Console) -> None:
+        """Render a skill menu, which displays the skills in abilities, and the letter to select them.
+        Will move to a different position based on where the player is located, so the player can always see where
+        they are.
+        """
+        super().on_render(console)
+        number_of_skills_in_abilities = len(self.engine.player.abilities.active_skills)
+
+        height = number_of_skills_in_abilities + 2
+
+        if height <= 3:
+            height = 3
+
+        if self.engine.player.x <= 30:
+            x = 40
+        else:
+            x = 0
+
+        y = 0
+
+        width = len(self.TITLE) + 4
+
+        console.draw_frame(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            title=self.TITLE,
+            clear=True,
+            fg=(255, 255, 255),
+            bg=(0, 0, 0),
+        )
+
+        if number_of_skills_in_abilities > 0:
+            for i, item in enumerate(self.engine.player.abilities.active_skills):
+                item_key = chr(ord("a") + i)
+
+                item_string = f"({item_key}) {item.name}"
+                console.print(x + 1, y + i + 1, item_string)
+        else:
+            console.print(x + 1, y + 1, "(Empty)")
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
+        player = self.engine.player
+        key = event.sym
+        index = key - tcod.event.KeySym.a
+
+        if 0 <= index <= 26:
+            try:
+                selected_skill = player.abilities.active_skills[index]
+            except IndexError:
+                self.engine.message_log.add_message("Invalid entry.", color.invalid)
+                return None
+            return self.on_skill_selected(selected_skill)
+        return super().ev_keydown(event)
+
+    def on_skill_selected(self, skill: ActiveSkill) -> Optional[ActionOrHandler]:
+        """Called when the user selects a valid item."""
+        raise NotImplementedError()
+
+
+class AbilitiesActivateHandler(AbilitiesEventHandler):
+    """Handle using a skill."""
+
+    TITLE = "Select a skill to use"
+
+    def on_skill_selected(self, skill: ActiveSkill) -> Optional[ActionOrHandler]:
+        return skill.activate()
