@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from tcod import Console
     from engine import Engine
     from game_map import GameMap
+    from entity import Actor
 
 
 def render_bar(
@@ -86,3 +87,33 @@ def render_names_at_mouse_location(
     )
 
     console.print(x=x, y=y, string=names_at_mouse_location)
+
+
+def render_equipment_details(console: Console, player: Actor):
+    if player.equipment.weapon and player.equipment.weapon.equippable.type == "Ranged":
+        # Print ammo amount, then below the ammo name and damage
+        if player.equipment.weapon.equippable.category == "Bow":
+            if player.equipment.back:
+                quiver = player.equipment.back
+                console.print(x=62, y=46,
+                              string=f'''Ammo:{quiver.equippable.num_of_ammo}/{quiver.equippable.capacity}''')
+                if quiver.equippable.items:
+                    console.print(x=62, y=47, string=f"Active Ammo: {quiver.equippable.items[0].name}")
+                    console.print(x=62, y=48, string=f"Damage:{quiver.equippable.items[0].ammo.damage}")
+        else:
+            weapon = player.equipment.weapon
+            console.print(x=58, y=46,
+                          string=f'''Ammo:{weapon.equippable.num_of_ammo}/{weapon.equippable.max_ammo}''')
+            if weapon.equippable.num_of_ammo > 0:
+                console.print(x=58, y=47, string=f"Active Ammo: {weapon.equippable.current_ammo[0].name}")
+                console.print(x=58, y=48, string=f"Damage:{weapon.equippable.current_ammo[0].ammo.damage}")
+    else:
+        if player.equipment.weapon and player.equipment.weapon.equippable.type == "Magic":
+            weapon = player.equipment.weapon
+            if weapon.equippable.category == "Wand":
+                if weapon.equippable.active_skill:
+                    console.print(x=58, y=47, string=f"Active Spell: {weapon.equippable.active_skill.name}")
+                    if weapon.equippable.active_skill.unit.type == "Combat":
+                        console.print(x=58, y=48, string=f"Damage:{weapon.equippable.active_skill.unit.damage}")
+
+

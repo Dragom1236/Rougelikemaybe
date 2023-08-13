@@ -595,7 +595,8 @@ class MagicWeaponAction(ActionWithLocation):
         weapon = self.entity.equipment.weapon
         if weapon and weapon.equippable.type == "Magic":
             if weapon.equippable.category == "Wand":
-                weapon.equippable.activate((self.x, self.y))
+                xy = self.x,self.y
+                weapon.equippable.activate(xy)
             else:
                 self.time_cost = weapon.equippable.time_cost
                 mp_cost = weapon.equippable.mp_cost

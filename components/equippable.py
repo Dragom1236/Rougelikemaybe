@@ -195,7 +195,7 @@ class Wand(MagicWeapon):
         self.active_skill: Optional[ActiveSkill] = None
         skills = copy.deepcopy(Skills)
         if skills:
-            if skills is list:
+            if isinstance(skills, list):
                 for skill in skills:
                     self.add_skill(skill)
             else:
@@ -241,8 +241,8 @@ class Wand(MagicWeapon):
         # Implement logic to calculate the combat rating for a wand
         pass
 
-    def activate(self, xy):
-        return actions.ExecuteAction(self.parent.parent.parent, self.active_skill, xy)
+    def activate(self, xy: int):
+        return actions.ExecuteAction(self.parent.parent.parent, self.active_skill, xy).perform()
 
     def active_unit(self):
         if self.active_skill:

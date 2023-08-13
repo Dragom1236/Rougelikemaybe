@@ -35,6 +35,7 @@ class Unit:
         self.requires_handler = requires_handler
         self.units = units or None
         self.is_child = is_child
+        self.type = None
 
     @property
     def user(self):
@@ -55,6 +56,7 @@ class CombatUnit(Unit):
         super().__init__(requires_handler, units, is_child)
         self.damage = damage
         self.is_ranged = is_ranged
+        self.type = "Combat"
 
 
 class CombatAoe(CombatUnit):
@@ -62,6 +64,7 @@ class CombatAoe(CombatUnit):
                  radius: int = 2, is_child=False):
         super().__init__(requires_handler, units, damage, is_ranged, is_child=is_child)
         self.radius = radius
+        self.type = "Combat"
         if self.requires_handler:
             self.is_ranged = True
         else:
@@ -126,6 +129,7 @@ class CombatSingleTarget(CombatUnit):
                  damage: int = 0, is_ranged=None, is_child=False, num_hits: int = 1, radius: int = None):
         super().__init__(requires_handler, units, damage, is_ranged, is_child=is_child)
         self.radius = radius
+        self.type = "Combat"
         self.turn_units = turn_units
         self.num_hits = num_hits
         if self.radius:

@@ -1,7 +1,7 @@
 # Create Melee Weapon - Iron Sword
 from components.Ammo import Ammo
 from components.equippable import MeleeWeapon, Bow, Staff, Orb, Wand, Armor, Container, Crossbow, Gun
-from skill_factories import Fireball
+from skill_factories import Fireball, PowerShot
 
 dagger = MeleeWeapon(rarity="common", damage_dice=(1, 6), time_cost=2)
 iron_sword = MeleeWeapon(rarity="common", damage_dice=(2, 6), time_cost=2)
@@ -19,7 +19,7 @@ staff = Staff(rarity="uncommon", damage_dice=(1, 4), mp_cost=2)
 # Create Orb - Mage Orb
 mage_orb = Orb(rarity="rare", damage_dice=(2, 3), mp_cost=3)
 
-fireball_wand = Wand(rarity="epic", Skills=Fireball)
+fireball_wand = Wand(rarity="epic", Skills=[Fireball, PowerShot])
 
 quiver = Container(rarity="common", capacity=10)
 

@@ -176,6 +176,20 @@ class MainGameEventHandler(EventHandler):
             return HistoryViewer(self.engine)
         elif key == tcod.event.KeySym.g:
             action = PickupAction(player)
+        elif key == tcod.event.KeySym.z:
+            if self.engine.player.equipment.weapon:
+                weapon = self.engine.player.equipment.weapon
+                if weapon.equippable.equipment_type == EquipmentType.WEAPON:
+                    if weapon.equippable.type == "Magic":
+                        if weapon.equippable.category == "Wand":
+                            weapon.equippable.cycle_active_skill(-1)
+        elif key == tcod.event.KeySym.x:
+            if self.engine.player.equipment.weapon:
+                weapon = self.engine.player.equipment.weapon
+                if weapon.equippable.equipment_type == EquipmentType.WEAPON:
+                    if weapon.equippable.type == "Magic":
+                        if weapon.equippable.category == "Wand":
+                            weapon.equippable.cycle_active_skill(1)
         elif key == tcod.event.KeySym.i:
             return InventoryActivateHandler(self.engine)
         elif key == tcod.event.KeySym.a:
