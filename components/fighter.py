@@ -144,7 +144,7 @@ class Fighter(BaseComponent):
 
     @property
     def magical_attack(self) -> int:
-        return self.magic
+        return self.magic//5
 
     @property
     def sight_range(self):

@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
+import actions
 from components.base_component import BaseComponent
 from equipment_types import EquipmentType
 
 if TYPE_CHECKING:
-    from entity import Item
+    from entity import Item, Actor
     from enchantment import Enchantment
-    from components.SkillComponent import Skill
+    from components.SkillComponent import Skill, ActiveSkill
 
 
 class Equippable(BaseComponent):
@@ -39,6 +40,7 @@ class Weapon(Equippable):
     def __init__(self, rarity: str, damage_dice: tuple[int, int]):
         super().__init__(equipment_type=EquipmentType.WEAPON, rarity=rarity)
         self.damage_dice = damage_dice
+        self.can_melee = False
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating based on the weapon's properties
@@ -79,9 +81,9 @@ class MeleeWeapon(Weapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
-        self.attack_type = "melee"
         self.type = "Melee"
         self.category = None
+        self.can_melee = True
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating based on the melee weapon's properties
@@ -93,7 +95,6 @@ class RangedWeapon(Weapon):
                  reload_time: float | int, max_distance: int, ):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
-        self.attack_type = "ranged"
         self.max_ammo = max_ammo
         self.reload_time = reload_time
         self.current_ammo: List[Item] = []
@@ -160,7 +161,7 @@ class MagicWeapon(Weapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float, mp_cost: int):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
-        self.attack_type = "magic"
+        self.type = "Magic"
         self.mp_cost = mp_cost
         self.category = None
 
@@ -168,6 +169,8 @@ class MagicWeapon(Weapon):
 class Staff(MagicWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], mp_cost: int):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, mp_cost=mp_cost)
+        self.can_melee = True
+        self.category = "Staff"
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for a staff
@@ -177,6 +180,7 @@ class Staff(MagicWeapon):
 class Orb(MagicWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], mp_cost: int):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=4, mp_cost=mp_cost)
+        self.category = "Orb"
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for an orb
@@ -184,9 +188,11 @@ class Orb(MagicWeapon):
 
 
 class Wand(MagicWeapon):
-    def __init__(self, rarity: str, Skills: List[Skill] | Skill = None):
+    def __init__(self, rarity: str, Skills: List[ActiveSkill] | ActiveSkill = None):
         super().__init__(rarity=rarity, damage_dice=(0, 0), time_cost=0, mp_cost=0)
-        self.skills: Dict[str, Skill] = {}
+        self.category = "Wand"
+        self.skills: Dict[str, ActiveSkill] = {}
+        self.active_skill: Optional[ActiveSkill] = None
         skills = copy.deepcopy(Skills)
         if skills:
             if skills is list:
@@ -194,8 +200,9 @@ class Wand(MagicWeapon):
                     self.add_skill(skill)
             else:
                 self.add_skill(Skills)
+            self.active_skill = list(self.skills.values())[0]
 
-    def add_skill(self, skill: Skill) -> None:
+    def add_skill(self, skill: ActiveSkill) -> None:
         # Add a skill to the wand's storage
         self.skills[skill.name] = skill
 
@@ -204,9 +211,42 @@ class Wand(MagicWeapon):
         if skill_name in self.skills:
             del self.skills[skill_name]
 
+    def cycle_active_skill(self, direction: int) -> None:
+        # Cycle through active skills by moving in the specified direction.
+        # Direction can be 1 (forward) or -1 (backward).
+        if self.skills:
+            skill_list = list(self.skills.keys())
+            current_index = skill_list.index(self.active_skill.name)
+            new_index = (current_index + direction) % len(skill_list)
+            new_skill_name = skill_list[new_index]
+            self.active_skill = self.skills[new_skill_name]
+
+    def update_manager(self, actor: Actor = None):
+        if actor:
+            for skill in self.skills.values():
+                skill.manager = actor.abilities
+            if self.active_skill:
+                self.active_skill.manager = actor.abilities
+        else:
+            for skill in self.skills.values():
+                skill.manager = None
+            if self.active_skill:
+                self.active_skill.manager = None
+
+    def update_cooldowns(self):
+        for skill in self.skills.values():
+            skill.update_cooldowns()
+
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating for a wand
         pass
+
+    def activate(self, xy):
+        return actions.ExecuteAction(self.parent.parent.parent, self.active_skill, xy)
+
+    def active_unit(self):
+        if self.active_skill:
+            return self.active_skill.unit
 
     def roll_damage(self) -> int:
         # Wands don't have damage die, so they can't deal damage.
@@ -253,5 +293,3 @@ class Container(Equippable):
             return True
         else:
             return False
-
-

@@ -132,3 +132,9 @@ Crossbow = Item(char=")", color=(165, 42, 42), name="Crossbow", equippable=equip
 iron_bullet = Item(char=",", color=(97, 102, 106), name="Bullet", ammo=bullet)
 
 Pistol = Item(char=")", color=(77, 82, 86), name="Pistol", equippable=equippable_factories.pistol)
+
+Wooden_Staff = Item(char="|", color=(160, 82, 45), name="Staff", equippable=equippable_factories.staff)
+
+Mage_Orb = Item(char="*", color=(0, 0, 255), name="Mage Orb", equippable=equippable_factories.mage_orb)
+
+Fireball_Wand = Item(char="~", color=(255, 30, 0), name="Wand of Fireball", equippable=equippable_factories.fireball_wand)

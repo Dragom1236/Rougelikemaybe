@@ -60,11 +60,13 @@ def new_game() -> Engine:
     bow = copy.deepcopy(entity_factories.Bow)
     leather_armor = copy.deepcopy(entity_factories.leather_armor)
     quiver = copy.deepcopy(entity_factories.Basic_Quiver)
+    wand = copy.deepcopy(entity_factories.Fireball_Wand)
 
     # dagger.parent = player.inventory
     leather_armor.parent = player.inventory
     quiver.parent = player.inventory
     bow.parent = player.inventory
+    wand.parent = player.inventory
 
     # player.inventory.items.append(dagger)
     # player.equipment.toggle_equip(dagger, add_message=False)
@@ -76,6 +78,9 @@ def new_game() -> Engine:
 
     player.inventory.items.append(leather_armor)
     player.equipment.toggle_equip(leather_armor, add_message=False)
+
+    player.inventory.items.append(wand)
+    player.equipment.toggle_equip(wand, False)
 
     player.abilities.add_active_skill(Fireball)
     player.abilities.add_active_skill(PowerShot)

@@ -14,10 +14,10 @@ wooden_crossbow = Crossbow(rarity="common", damage_dice=(2, 5), max_distance=10)
 pistol = Gun(rarity="common", damage_dice=(1, 20), max_distance=7, max_ammo=3, reload_time=3, shot_time=1)
 
 # Create Staff
-staff = Staff(rarity="uncommon", damage_dice=(1, 4), mp_cost=5)
+staff = Staff(rarity="uncommon", damage_dice=(1, 4), mp_cost=2)
 
 # Create Orb - Mage Orb
-mage_orb = Orb(rarity="rare", damage_dice=(2, 3), mp_cost=10)
+mage_orb = Orb(rarity="rare", damage_dice=(2, 3), mp_cost=3)
 
 fireball_wand = Wand(rarity="epic", Skills=Fireball)
 

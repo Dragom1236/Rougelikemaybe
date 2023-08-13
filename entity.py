@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from components.fighter import Fighter
     from components.inventory import Inventory
     from components.consumable import Consumable
-    from components.equippable import Equippable, Accessory, RangedWeapon, Armor, Weapon, Bow, Container, Crossbow, Gun
+    from components.equippable import Equippable, Accessory, RangedWeapon, Armor, Weapon, Bow, Container, Crossbow, Gun, \
+    MagicWeapon, Wand
     from components.equipment import Equipment
     from components.Status import StatusEffectManager
     from components.conditions import ConditionManager
@@ -173,7 +174,8 @@ class Item(Entity):
             name: str = "<Unnamed>",
             consumable: Optional[Consumable] = None,
             equippable: Optional[
-                Union[Equippable, Weapon, Armor, Accessory, RangedWeapon, Bow, Crossbow, Gun, Container]] = None,
+                Union[
+                    Equippable, Weapon, Armor, Accessory, RangedWeapon, Bow, Crossbow, Gun, MagicWeapon,Wand, Container]] = None,
             ammo: Optional[Ammo] = None
     ):
         super().__init__(

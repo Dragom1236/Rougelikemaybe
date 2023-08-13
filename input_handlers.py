@@ -129,6 +129,12 @@ class EventHandler(BaseEventHandler):
             self.engine.player.status_effect_manager.update_effects()
             self.engine.player.abilities.update_cooldowns()
             self.engine.player.conditions_manager.reduce_conditions_duration()
+            if self.engine.player.equipment.weapon:
+                weapon = self.engine.player.equipment.weapon
+                if weapon.equippable.equipment_type == EquipmentType.WEAPON:
+                    if weapon.equippable.type == "Magic":
+                        if weapon.equippable.category == "Wand":
+                            weapon.equippable.update_cooldowns()
             self.engine.player.fighter.time = self.engine.player.fighter.max_time
             self.engine.handle_enemy_turns()
             self.engine.update_fov()  # Update the FOV before the players next action.
@@ -179,11 +185,22 @@ class MainGameEventHandler(EventHandler):
         elif key == tcod.event.KeySym.f and modifier & (
                 tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
         ):
-            if self.engine.player.equipment.weapon and self.engine.player.equipment.weapon.equippable.type == "Ranged":
-                # Create the ranged weapon action and return it with the target location
-                return SingleRangedAttackHandler(self.engine,
-                                                 callback=lambda xy: actions.RangedWeaponAction(self.engine.player,
-                                                                                                *xy))
+            if self.engine.player.equipment.weapon:
+                if self.engine.player.equipment.weapon.equippable.type == "Ranged":
+                    # Create the ranged weapon action and return it with the target location
+                    return SingleRangedAttackHandler(self.engine,
+                                                     callback=lambda xy: actions.RangedWeaponAction(self.engine.player,
+                                                                                                    *xy))
+                elif self.engine.player.equipment.weapon.equippable.type == "Magic":
+                    if self.engine.player.equipment.weapon.equippable.category != "Wand":
+                        return SingleRangedAttackHandler(self.engine,
+                                                         callback=lambda xy: actions.MagicWeaponAction(
+                                                             self.engine.player,
+                                                             *xy))
+                    else:
+                        if self.engine.player.equipment.weapon.equippable.active_unit():
+                            return self.engine.player.equipment.weapon.equippable.active_skill.unit.get_action()
+
         elif key == tcod.event.KeySym.c and modifier & (
                 tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
         ):
@@ -201,9 +218,12 @@ class MainGameEventHandler(EventHandler):
         # Check if the event was a left mouse button click
         if event.button == 1:
             # Check if the player has a ranged weapon equipped
-            if self.engine.player.equipment.weapon and self.engine.player.equipment.weapon.equippable.type == "Ranged":
-                # Create the ranged weapon action and return it with the target location
-                return actions.RangedWeaponAction(self.engine.player, event.tile.x, event.tile.y)
+            if self.engine.player.equipment.weapon:
+                if self.engine.player.equipment.weapon.equippable.type == "Ranged":
+                    # Create the ranged weapon action and return it with the target location
+                    return actions.RangedWeaponAction(self.engine.player, event.tile.x, event.tile.y)
+                elif self.engine.player.equipment.weapon.equippable.type == "Magic":
+                    return actions.MagicWeaponAction(self.engine.player, event.tile.x, event.tile.y)
 
 
 class GameOverEventHandler(EventHandler):

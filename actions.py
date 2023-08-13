@@ -218,19 +218,25 @@ class MeleeWeaponAction(ActionWithDirection):
 class BumpAction(ActionWithDirection):
     def perform(self) -> None:
         self.time_cost = 0
-        if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.type == "Melee":
-            weapon_action = MeleeWeaponAction(self.entity, self.dx, self.dy)
+        weapon_action = None
+        if self.entity.equipment.weapon:
+            if self.entity.equipment.weapon.equippable.type == "Melee" or self.entity.equipment.weapon.equippable.can_melee:
+                weapon_action = MeleeWeaponAction(self.entity, self.dx, self.dy)
         melee_action = MeleeAction(self.entity, self.dx, self.dy)
         movement_action = MovementAction(self.entity, self.dx, self.dy)
         if self.target_actor:
-            if self.entity.equipment.weapon and self.entity.equipment.weapon.equippable.attack_type == "melee":
+            if weapon_action:
                 if self.entity.fighter.time >= weapon_action.time_cost:
                     return weapon_action.perform()
                 else:
-                    if self.entity.fighter.time >= melee_action.time_cost:
-                        return melee_action.perform()
+                    raise exceptions.Impossible("You do not have enough time.")
+            elif self.entity.equipment.weapon:
+                raise exceptions.Impossible("You don't have an appropriate weapon.")
             else:
-                raise exceptions.Impossible("You do not have enough time.")
+                if self.entity.fighter.time >= melee_action.time_cost:
+                    return melee_action.perform()
+                else:
+                    raise exceptions.Impossible("You do not have enough time.")
 
         else:
             if self.entity.fighter.time >= movement_action.time_cost:
@@ -577,3 +583,53 @@ class GunWeaponAction(ActionWithLocation):
             total_time_cost += self.time_cost
 
         self.entity.fighter.time -= total_time_cost
+
+
+class MagicWeaponAction(ActionWithLocation):
+    def __init__(self, entity, x, y):
+        super().__init__(entity, x, y, time_cost=0)
+
+    def perform(self) -> None:
+        if not self.entity.has_direct_los(self.x, self.y):
+            raise exceptions.Impossible("You don't have a direct line of fire.")
+        weapon = self.entity.equipment.weapon
+        if weapon and weapon.equippable.type == "Magic":
+            if weapon.equippable.category == "Wand":
+                weapon.equippable.activate((self.x, self.y))
+            else:
+                self.time_cost = weapon.equippable.time_cost
+                mp_cost = weapon.equippable.mp_cost
+                if self.entity.fighter.time < self.time_cost:
+                    raise exceptions.Impossible("Not enough time.")
+                if self.entity.fighter.mp < mp_cost:
+                    raise exceptions.Impossible("Not enough time.")
+                target = self.target_actor
+                print(target)
+                if not target:
+                    raise exceptions.Impossible("Nothing to attack.")
+                elif target == self.entity:
+                    raise exceptions.Impossible("You can't target yourself.")
+                damage = weapon.equippable.roll_damage() + self.entity.fighter.magical_attack - target.fighter.magical_defense
+
+                attack_desc = f"{self.entity.name.capitalize()} fires magic energy at {target.name}"
+                if self.entity is self.engine.player:
+                    attack_color = color.player_atk
+                else:
+                    attack_color = color.enemy_atk
+
+                if damage > 0:
+                    self.engine.message_log.add_message(
+                        f"{attack_desc} for {damage} hit points.", attack_color
+                    )
+                    target.fighter.hp -= damage
+                    if not target.is_alive and target is not self.engine.player:
+                        self.entity.level.add_xp(target.level.xp_given)
+                else:
+                    self.engine.message_log.add_message(
+                        f"{attack_desc} but does no damage.", attack_color
+                    )
+                self.entity.fighter.mp -= mp_cost
+                self.entity.fighter.time -= self.time_cost
+
+        else:
+            raise exceptions.Impossible("You are wielding a non-magic weapon(or not wielding a weapon).")
