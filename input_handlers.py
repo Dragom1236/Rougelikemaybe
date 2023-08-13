@@ -176,6 +176,14 @@ class MainGameEventHandler(EventHandler):
             return AbilitiesActivateHandler(self.engine)
         elif key == tcod.event.KeySym.d:
             return InventoryDropHandler(self.engine)
+        elif key == tcod.event.KeySym.f and modifier & (
+                tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
+        ):
+            if self.engine.player.equipment.weapon and self.engine.player.equipment.weapon.equippable.type == "Ranged":
+                # Create the ranged weapon action and return it with the target location
+                return SingleRangedAttackHandler(self.engine,
+                                                 callback=lambda xy: actions.RangedWeaponAction(self.engine.player,
+                                                                                                *xy))
         elif key == tcod.event.KeySym.c and modifier & (
                 tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
         ):
@@ -352,14 +360,13 @@ class InventoryEventHandler(AskUserEventHandler):
                 if item.ammo:
                     if item.ammo.stacks > 1:
                         item_string = f"({item_key}) {item.ammo.stacks} {item.name}s"
-                elif item.equippable:
-                    if item.equippable.equipment_type == EquipmentType.Container:
-                        if is_equipped:
-                            item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity} (E)"
-                        else:
-                            item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
                 elif is_equipped:
-                    item_string = f"{item_string} (E)"
+                    if item.equippable.equipment_type == EquipmentType.Container:
+                        item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity} (E)"
+                    else:
+                        item_string = f"{item_string} (E)"
+                elif item.equippable.equipment_type == EquipmentType.Container:
+                    item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
                 else:
                     item_string = f"({item_key}) {item.name}"
 
@@ -397,8 +404,14 @@ class InventoryActivateHandler(InventoryEventHandler):
             return item.consumable.get_action(self.engine.player)
         elif item.equippable:
             return actions.EquipAction(self.engine.player, item)
-        elif item.ammo and self.engine.player.equipment.weapon.equippable.type == "Ranged":
-            return actions.LoadAction(self.engine.player, item)
+        elif item.ammo:
+            if self.engine.player.equipment.weapon:
+                if self.engine.player.equipment.weapon.equippable.type == "Ranged":
+                    return actions.LoadAction(self.engine.player, item)
+                else:
+                    raise exceptions.Impossible("You can't load ammo without the appropriate weapon.")
+            else:
+                raise exceptions.Impossible("No weapon.")
         else:
             return None
 

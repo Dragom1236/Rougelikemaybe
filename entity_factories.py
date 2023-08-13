@@ -5,7 +5,7 @@ from components.Status import StatusEffectManager
 from components.ai import HostileEnemy, FleeingAI
 from components.conditions import ConditionManager
 from components.equipment import Equipment
-from components.equippable_factories import arrow
+from components.equippable_factories import arrow, bolt, bullet
 from components.fighter import Fighter
 from components.inventory import Inventory
 from components.level import Level
@@ -121,6 +121,14 @@ Basic_Quiver = Item(
     char="(", color=(80, 42, 42), name="Quiver", equippable=equippable_factories.quiver
 )
 
-Wooden_Arrow = Item(char=",", color=(90, 69, 19), name="Arrow", ammo=arrow)
+Wooden_Arrow = Item(char=",", color=(120, 99, 49), name="Arrow", ammo=arrow)
 
-Bow = Item(char=")", color=(120, 60, 60), name="Bow", equippable=equippable_factories.wooden_bow)
+Bow = Item(char=")", color=(160, 82, 45), name="Bow", equippable=equippable_factories.wooden_bow)
+
+Wooden_Bolt = Item(char=",", color=(90, 69, 19), name="Bolt", ammo=bolt)
+
+Crossbow = Item(char=")", color=(165, 42, 42), name="Crossbow", equippable=equippable_factories.wooden_crossbow)
+
+iron_bullet = Item(char=",", color=(97, 102, 106), name="Bullet", ammo=bullet)
+
+Pistol = Item(char=")", color=(77, 82, 86), name="Pistol", equippable=equippable_factories.pistol)

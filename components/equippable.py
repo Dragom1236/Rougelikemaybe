@@ -90,7 +90,7 @@ class MeleeWeapon(Weapon):
 
 class RangedWeapon(Weapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int, max_ammo: int,
-                 reload_time: float | int):
+                 reload_time: float | int, max_distance: int, ):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
         self.time_cost = time_cost
         self.attack_type = "ranged"
@@ -99,6 +99,7 @@ class RangedWeapon(Weapon):
         self.current_ammo: List[Item] = []
         self.type = "Ranged"
         self.category = None
+        self.range = max_distance
 
     def update_combat_rating(self) -> None:
         # Implement logic to calculate the combat rating based on the ranged weapon's properties
@@ -121,8 +122,9 @@ class RangedWeapon(Weapon):
 
 
 class Bow(RangedWeapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int]):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, max_ammo=1, reload_time=0)
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_distance: int, ):
+        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, max_ammo=1, reload_time=0,
+                         max_distance=max_distance)
         self.category = "Bow"
 
     def update_combat_rating(self) -> None:
@@ -132,9 +134,9 @@ class Bow(RangedWeapon):
 
 class Gun(RangedWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, reload_time: float | int,
-                 shot_time: float | int):
+                 shot_time: float | int, max_distance: int, ):
         super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=0, max_ammo=max_ammo,
-                         reload_time=reload_time)
+                         reload_time=reload_time, max_distance=max_distance)
         self.shot_time = shot_time
         self.category = "Gun"
 
@@ -144,8 +146,9 @@ class Gun(RangedWeapon):
 
 
 class Crossbow(RangedWeapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int]):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=2, max_ammo=1, reload_time=2)
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_distance: int, ):
+        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=2, max_ammo=1, reload_time=3,
+                         max_distance=max_distance)
         self.category = "Crossbow"
 
     def update_combat_rating(self) -> None:
@@ -250,3 +253,5 @@ class Container(Equippable):
             return True
         else:
             return False
+
+

@@ -122,6 +122,14 @@ class Engine:
                     if quiver.equippable.items:
                         console.print(x=62, y=47, string=f"Active Ammo: {quiver.equippable.items[0].name}")
                         console.print(x=62, y=48, string=f"Damage:{quiver.equippable.items[0].ammo.damage}")
+            else:
+                weapon = self.player.equipment.weapon
+                console.print(x=58, y=46,
+                              string=f'''Ammo:{weapon.equippable.num_of_ammo}/{weapon.equippable.max_ammo}''')
+                if weapon.equippable.num_of_ammo>0:
+                    console.print(x=58, y=47, string=f"Active Ammo: {weapon.equippable.current_ammo[0].name}")
+                    console.print(x=58, y=48, string=f"Damage:{weapon.equippable.current_ammo[0].ammo.damage}")
+
 
     def save_as(self, filename: str) -> None:
         """Save this Engine instance as a compressed file."""

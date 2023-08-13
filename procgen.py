@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from entity import Entity
 
 max_items_by_floor = [
-    (1, 10),
+    (1, 30),
     (4, 2),
 ]
 
@@ -23,8 +23,11 @@ max_monsters_by_floor = [
     (4, 3),
     (6, 5),
 ]
+
 item_chances: Dict[int, List[Tuple[Entity, int]]] = {
-    0: [(entity_factories.health_potion, 35), (entity_factories.dagger, 5), (entity_factories.Wooden_Arrow, 35)],
+    0: [(entity_factories.health_potion, 35), (entity_factories.dagger, 5), (entity_factories.Wooden_Arrow, 35),
+        (entity_factories.Pistol, 35), (entity_factories.Crossbow, 35), (entity_factories.iron_bullet, 35),
+        (entity_factories.Wooden_Bolt, 35), ],
     2: [(entity_factories.confusion_scroll, 100), (entity_factories.leather_armor, 5)],
     4: [(entity_factories.lightning_scroll, 25), (entity_factories.sword, 5)],
     6: [(entity_factories.fireball_scroll, 25), (entity_factories.chain_mail, 15)],
