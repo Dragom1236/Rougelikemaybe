@@ -56,19 +56,19 @@ def new_game() -> Engine:
     engine.message_log.add_message(
         "Hello and welcome, adventurer, to yet another dungeon!", color.welcome_text
     )
-    # dagger = copy.deepcopy(entity_factories.dagger)
+    dagger = copy.deepcopy(entity_factories.dagger)
     bow = copy.deepcopy(entity_factories.Bow)
     leather_armor = copy.deepcopy(entity_factories.leather_armor)
     quiver = copy.deepcopy(entity_factories.Basic_Quiver)
     wand = copy.deepcopy(entity_factories.Fireball_Wand)
 
-    # dagger.parent = player.inventory
+    dagger.parent = player.inventory
     leather_armor.parent = player.inventory
     quiver.parent = player.inventory
     bow.parent = player.inventory
     wand.parent = player.inventory
 
-    # player.inventory.items.append(dagger)
+    player.inventory.items.append(dagger)
     # player.equipment.toggle_equip(dagger, add_message=False)
     player.inventory.items.append(bow)
     player.equipment.toggle_equip(bow, add_message=False)
