@@ -14,34 +14,32 @@ if TYPE_CHECKING:
 class Fighter(BaseComponent):
     parent: Actor
 
-    def __init__(self, hp: int, mp: int, se: int, sp: int, strength: int, dexterity: int, agility: int,
-                 constitution: int, magic: int, awareness: int, charisma: int):
-        self.strength = strength
-        self.dexterity = dexterity
-        self.agility = agility
-        self.constitution = constitution
-        self.magic = magic
-        self.awareness = awareness
-        self.charisma = charisma
+    def __init__(self, hp: int, mp: int, se: int, sp: int):
+        self.strength: int
+        self.dexterity: int
+        self.agility: int
+        self.constitution: int
+        self.magic: int
+        self.awareness: int
+        self.charisma: int
         self.extra_hp = hp
         self.extra_mp = mp
         self.extra_sp = sp
         self.extra_se = se
-        self.max_hp = self.extra_hp + 2 * self.constitution
-        self._hp = self.max_hp
-        self.max_mp = self.extra_mp + self.magic
-        self._mp = self.max_mp
-        self.max_se = self.extra_se + self.charisma // 20
-        self._se = self.max_se
-        self.max_sp = self.extra_sp + self.constitution
-        self._sp = self.max_sp
+        self.max_hp: int
+        self._hp: int
+        self.max_mp: int
+        self._mp: int
+        self.max_se: int
+        self._se: int
+        self.max_sp: int
+        self._sp: int
 
         self.magical_defense = 0  # Set to 0 initially
-        self.critical_chance: float = (self.dexterity // 10) / 100
-        self.critical_damage: float = (self.strength // 2) / 100
+        self.critical_chance: float
+        self.critical_damage: float
         self.max_time: float = 6
         self._time = self.max_time
-        self.initiative: int = 1 + agility
         self.damage_log: List[DamageLogEntry] = []
 
     @property
@@ -230,6 +228,28 @@ class Fighter(BaseComponent):
 
     def create_damage_log(self, category: str, source_entity: Actor, details: str = None):
         self.add_damage_log_entry(DamageLogEntry(category, source_entity, details))
+
+    def set_stats(self):
+        race = self.parent.race
+        self.strength = race.strength
+        self.dexterity = race.dexterity
+        self.agility = race.agility
+        self.constitution = race.constitution
+        self.magic = race.magic
+        self.awareness = race.awareness
+        self.charisma = race.charisma
+        self.max_hp = self.extra_hp + 2 * self.constitution
+        self._hp = self.max_hp
+        self.max_mp = self.extra_mp + self.magic
+        self._mp = self.max_mp
+        self.max_se = self.extra_se + self.charisma // 20
+        self._se = self.max_se
+        self.max_sp = self.extra_sp + self.constitution
+        self._sp = self.max_sp
+
+        self.magical_defense = 0  # Set to 0 initially
+        self.critical_chance: float = (self.dexterity // 10) / 100
+        self.critical_damage: float = (self.strength // 2) / 100
 
 
 class DamageLogEntry:

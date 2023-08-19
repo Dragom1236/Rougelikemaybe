@@ -108,3 +108,9 @@ class Level(BaseComponent):
                 self.increase_agility, self.increase_constitution,
                 self.increase_magic, self.increase_awareness,
                 self.increase_charisma]
+
+    def override_level_info(self):
+        race = self.parent.race
+        self.level_up_base = race.level_up_base
+        self.level_up_factor = race.level_up_factor
+        self.xp_given = race.xp_given

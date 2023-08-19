@@ -3,6 +3,7 @@ from components import consumable, equippable_factories
 from components.SkillComponent import Abilities
 from components.Status import StatusEffectManager
 from components.ai import HostileEnemy, FleeingAI
+import race_factories
 from components.conditions import ConditionManager
 from components.equipment import Equipment
 from components.equippable_factories import arrow, bolt, bullet
@@ -17,8 +18,8 @@ player = Actor(
     color=(255, 255, 255),
     name="Player",
     ai_cls=HostileEnemy,
-    fighter=Fighter(hp=70, mp=20, se=1, sp=25, strength=100, dexterity=15, magic=15, constitution=100, awareness=100,
-                    charisma=10, agility=10),
+    race=race_factories.human_race,
+    fighter=Fighter(hp=70, mp=20, se=1, sp=25,),
     inventory=Inventory(capacity=26),
     status_effect_manager=StatusEffectManager(),
     level=Level(level_up_base=200),
@@ -33,8 +34,8 @@ orc = Actor(
     color=(63, 127, 63),
     name="Orc",
     ai_cls=HostileEnemy,
-    fighter=Fighter(hp=0, mp=0, se=0, sp=0, strength=15, dexterity=5, magic=5, constitution=15, awareness=8,
-                    charisma=5, agility=6),
+    race=race_factories.orc_race,
+    fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
     inventory=Inventory(capacity=1),
     level=Level(level_up_base=150, xp_given=50),
@@ -48,8 +49,8 @@ kobold = Actor(
     color=(125, 42, 42),
     name="Kobold",
     ai_cls=FleeingAI,
-    fighter=Fighter(hp=0, mp=0, se=0, sp=0, strength=15, dexterity=30, magic=5, constitution=5, awareness=32,
-                    charisma=5, agility=30),
+    race=race_factories.kobold_race,
+    fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
     inventory=Inventory(capacity=2),
     level=Level(level_up_base=50, xp_given=10),
@@ -63,8 +64,8 @@ troll = Actor(
     color=(0, 127, 0),
     name="Troll",
     ai_cls=HostileEnemy,
-    fighter=Fighter(hp=10, mp=0, se=0, sp=0, strength=20, dexterity=3, magic=3, constitution=20, awareness=4,
-                    charisma=3, agility=4),
+    race=race_factories.troll_race,
+    fighter=Fighter(hp=10, mp=0, se=0, sp=0,),
     inventory=Inventory(capacity=3),
     status_effect_manager=StatusEffectManager(),
     level=Level(level_up_base=250, xp_given=100),

@@ -6,7 +6,7 @@ from typing import Tuple, TypeVar, TYPE_CHECKING, Optional, Type, Union
 
 from tcod.map import compute_fov
 
-from components.Ammo import Ammo
+
 from render_order import RenderOrder
 
 if TYPE_CHECKING:
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from components.conditions import ConditionManager
     from components.SkillComponent import Abilities
     from components.level import Level
+    from components.Ammo import Ammo
+    from components.Race import Race
 
 T = TypeVar("T", bound="Entity")
 
@@ -109,6 +111,7 @@ class Actor(Entity):
             conditions_manager: ConditionManager,
             status_effect_manager: StatusEffectManager,
             abilities: Abilities,
+            race:Race,
     ):
         super().__init__(x=x, y=y, char=char, color=color, name=name, blocks_movement=True,
                          render_order=RenderOrder.ACTOR)
@@ -129,6 +132,10 @@ class Actor(Entity):
         self.abilities.parent = self
         self.equipment: Equipment = equipment
         self.equipment.parent = self
+        self.race = race
+        self.race.parent = self
+        self.fighter.set_stats()
+        self.level.override_level_info()
 
     @property
     def is_alive(self) -> bool:
