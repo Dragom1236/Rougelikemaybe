@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Union, List, Optional
 import numpy as np
 
 import actions
+from components.base_component import BaseComponent
 from exceptions import Impossible
 from input_handlers import AreaRangedAttackHandler, SingleRangedAttackHandler
 
@@ -31,8 +32,7 @@ class Skill:
 class Unit:
     owner: Union[Skill]
 
-    def __init__(self, requires_handler=False, units: List[Union[CombatAoe]] = None, is_child: bool = False):
-        self.requires_handler = requires_handler
+    def __init__(self, units: List[Union[CombatAoe]] = None, is_child: bool = False):
         self.units = units or None
         self.is_child = is_child
         self.type = None
@@ -40,6 +40,13 @@ class Unit:
     @property
     def user(self):
         return self.owner.manager.parent
+
+    @property
+    def user_is_player(self):
+        if self.user == self.owner.manager.engine.player:
+            return True
+        else:
+            return False
 
     def set_owners(self):
         if self.units:
@@ -51,31 +58,30 @@ class Unit:
 class CombatUnit(Unit):
     owner: ActiveSkill
 
-    def __init__(self, requires_handler=False, units: List[Unit] = None, damage: int = 0, is_ranged=None,
+    def __init__(self, units: List[Unit] = None, damage: int = 0, is_ranged=None,
                  is_child=False):
-        super().__init__(requires_handler, units, is_child)
+        super().__init__(units, is_child)
         self.damage = damage
         self.is_ranged = is_ranged
         self.type = "Combat"
 
 
 class CombatAoe(CombatUnit):
-    def __init__(self, requires_handler=False, units: List[Union[CombatAoe]] = None, damage: int = 0, is_ranged=None,
+    def __init__(self, units: List[Union[CombatAoe]] = None, damage: int = 0, is_ranged=None,
                  radius: int = 2, is_child=False):
-        super().__init__(requires_handler, units, damage, is_ranged, is_child=is_child)
+        super().__init__(units, damage, is_ranged, is_child=is_child)
         self.radius = radius
         self.type = "Combat"
-        if self.requires_handler:
-            self.is_ranged = True
-        else:
-            self.is_ranged = False
 
-    def get_action(self):
-        if self.requires_handler:
-            return AreaRangedAttackHandler(self.user.gamemap.engine,
-                                           self.radius,
-                                           callback=lambda xy: actions.ExecuteAction(self.user, self.owner,
-                                                                                     xy=xy))
+    def get_action(self, xy=None):
+        if self.is_ranged:
+            if self.user_is_player:
+                return AreaRangedAttackHandler(self.user.gamemap.engine,
+                                               self.radius,
+                                               callback=lambda XY: actions.ExecuteAction(self.user, self.owner,
+                                                                                         xy=XY))
+            else:
+                return actions.ExecuteAction(self.user, self.owner, xy=xy)
         else:
             return actions.ExecuteAction(self.user, self.owner)
 
@@ -92,6 +98,8 @@ class CombatAoe(CombatUnit):
                     actor.gamemap.engine.message_log.add_message(
                         f"The {actor.name} is engulfed in a fiery explosion, taking {self.damage} damage!"
                     )
+                    actor.fighter.create_damage_log(category="Attack", source_entity=self.user,
+                                                    details=f"The {actor.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
                     actor.fighter.take_damage(self.damage)
                     targets_hit = True
 
@@ -112,9 +120,9 @@ class CombatAoe(CombatUnit):
                         # Since it's melee, defense is used.
                         calculated_damage = self.damage - target.fighter.defense
                         if calculated_damage > 0:
+                            target.fighter.create_damage_log(category="Attack", source_entity=self.user,
+                                                             details=f"The {target.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
                             target.fighter.hp -= calculated_damage
-                            if not target.is_alive and target is not self.user.gamemap.engine.player:
-                                self.user.level.add_xp(target.level.xp_given)
             if self.units:
                 for unit in self.units:
                     unit.execute(xy)
@@ -124,10 +132,10 @@ class CombatAoe(CombatUnit):
 
 
 class CombatSingleTarget(CombatUnit):
-    def __init__(self, requires_handler=False, units: List[Union[CombatAoe]] = None,
+    def __init__(self, units: List[Union[CombatAoe]] = None,
                  turn_units: List[Union[CombatAoe]] = None,
                  damage: int = 0, is_ranged=None, is_child=False, num_hits: int = 1, radius: int = None):
-        super().__init__(requires_handler, units, damage, is_ranged, is_child=is_child)
+        super().__init__(units, damage, is_ranged, is_child=is_child)
         self.radius = radius
         self.type = "Combat"
         self.turn_units = turn_units
@@ -135,13 +143,17 @@ class CombatSingleTarget(CombatUnit):
         if self.radius:
             self.is_ranged = False
 
-    def get_action(self):
-        if self.requires_handler:
-            return SingleRangedAttackHandler(self.user.gamemap.engine,
-                                             callback=lambda xy: actions.ExecuteAction(self.user, self.owner,
-                                                                                       xy=xy))
+    def get_action(self, xy=None):
+        if self.is_ranged:
+            if self.user_is_player:
+                return SingleRangedAttackHandler(self.user.gamemap.engine,
+                                                 callback=lambda XY: actions.ExecuteAction(self.user, self.owner,
+                                                                                           xy=XY))
+            else:
+                return actions.ExecuteAction(self.user, self.owner, xy)
+
         else:
-            return actions.ExecuteAction(self.user, self.owner)
+            return actions.ExecuteAction(self.user, self.owner, xy)
 
     def execute(self, xy=None):
         if xy:
@@ -157,6 +169,8 @@ class CombatSingleTarget(CombatUnit):
                     target.gamemap.engine.message_log.add_message(
                         f"The {target.name} is hit, taking {self.damage} damage!"
                     )
+                    target.fighter.create_damage_log(category="Attack", source_entity=self.user,
+                                                     details=f"The {target.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
                     target.fighter.take_damage(self.damage)
                 if self.units:
                     for unit in self.units:
@@ -354,101 +368,11 @@ class ActiveSkill(Skill):
         else:
             return True
 
-    def activate(self):
-        return self.unit.get_action()
+    def activate(self, xy=None):
+        return self.unit.get_action(xy)
 
     def reset_cooldown(self):
         self.remaining_cooldown = self.cooldown
-
-    def execute_combat_aoe(self, actor, unit: CombatAoe):
-        is_ranged = unit.is_ranged
-        radius = unit.radius
-        damage = unit.damage
-
-        if is_ranged:
-            # If it's a ranged AOE, get a random target within the specified radius.
-            entity = random.choice(actor.ai.actor_search())
-            xy = entity.x, entity.y
-            calculated_damage = damage - entity.fighter.defense
-            if calculated_damage > 0:
-                entity.fighter.hp -= calculated_damage
-                if not entity.is_alive and entity is not actor.gamemap.engine.player:
-                    actor.level.add_xp(entity.level.xp_given)
-                if unit.status_units:
-                    for status in unit.status_units:
-                        status.execute(actor, entity)
-
-            # Apply the AOE attack to all targets within the given radius around the random target's location.
-            for target in actor.gamemap.actors:
-                if target.distance(*xy) <= radius and target is not actor and target.is_alive:
-                    # Since it's a ranged attack, we will use defense.
-                    calculated_damage = damage - target.fighter.defense
-                    if calculated_damage > 0:
-                        target.fighter.hp -= calculated_damage
-                        if not target.is_alive and target is not actor.gamemap.engine.player:
-                            actor.level.add_xp(target.level.xp_given)
-                        elif unit.status_units:
-                            for status in unit.status_units:
-                                status.execute(actor, target)
-
-
-        else:
-            # If it's a melee AOE, we'll inflict damage to all enemies in the user's reach (within 1 tile).
-            for target in actor.gamemap.actors:
-                if target is not actor and target.is_alive:
-                    distance = actor.distance(target.x, target.y)
-                    if distance <= 1:
-                        # Since it's melee, defense is used.
-                        calculated_damage = damage - target.fighter.defense
-                        if calculated_damage > 0:
-                            target.fighter.hp -= calculated_damage
-                            if not target.is_alive and target is not actor.gamemap.engine.player:
-                                actor.level.add_xp(target.level.xp_given)
-                            elif unit.status_units:
-                                for status in unit.status_units:
-                                    status.execute(actor, target)
-
-    # def execute_combat_target(self, user: Actor, unit: CombatTarget):
-    #     is_ranged = unit.is_ranged
-    #     can_choose = unit.can_choose
-    #     num_hits = unit.num_hits
-    #     damage = unit.damage
-    #     num_targets = unit.num_targets
-    #
-    #     targets = []
-    #
-    #     if can_choose:
-    #         pass
-    #     else:
-    #         if is_ranged:
-    #             # If the player cannot choose targets, use the provided code to target the nearest enemy
-    #             for actor in user.gamemap.actors:
-    #                 if actor is not user and actor in user.ai.actors_search() and len(targets) <= num_targets:
-    #                     targets.append(actor)
-    #         else:
-    #             # If the player cannot choose targets, use the provided code to target the nearest enemy
-    #             for actor in user.gamemap.actors:
-    #                 if actor is not user and actor in user.ai.actors_search() and len(targets) <= num_targets:
-    #                     distance = user.distance(actor.x, actor.y)
-    #
-    #                     if distance <= 1:
-    #                         targets.append(actor)
-    #
-    #     if targets:
-    #         if unit.status_units:
-    #             for status in unit.status_units:
-    #                 status.execute(user, targets)
-    #         for _ in range(num_hits):
-    #             for target in targets:
-    #                 if target.is_alive:
-    #                     # Since it's melee, defense is used
-    #                     taken_damage = damage - target.fighter.defense
-    #                     if taken_damage > 0:
-    #                         target.fighter.hp -= taken_damage
-    #                         if not target.is_alive and target is not user.gamemap.engine.player:
-    #                             user.level.add_xp(target.level.xp_given)
-    #                 else:
-    #                     continue
 
     def deduct_costs(self, user: Actor):
         # Deduct the resource costs (MP, SP, SE) from the user
@@ -466,7 +390,7 @@ class ActiveSkill(Skill):
         return False
 
 
-class Abilities:
+class Abilities(BaseComponent):
     parent: Actor
 
     def __init__(self):

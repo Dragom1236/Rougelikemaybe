@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import color
 from components.base_component import BaseComponent
@@ -42,6 +42,7 @@ class Fighter(BaseComponent):
         self.max_time: float = 6
         self._time = self.max_time
         self.initiative: int = 1 + agility
+        self.damage_log: List[DamageLogEntry] = []
 
     @property
     def time(self) -> float:
@@ -100,7 +101,10 @@ class Fighter(BaseComponent):
         self.parent.ai = None
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = RenderOrder.CORPSE
-
+        most_recent_damage_entry = self.damage_log[-1]
+        attacker = most_recent_damage_entry.source_entity
+        if attacker.is_alive:
+            attacker.level.add_xp(self.parent.level.xp_given)
         self.engine.message_log.add_message(death_message, death_message_color)
 
     @property
@@ -144,7 +148,7 @@ class Fighter(BaseComponent):
 
     @property
     def magical_attack(self) -> int:
-        return self.magic//5
+        return self.magic // 5
 
     @property
     def sight_range(self):
@@ -214,3 +218,22 @@ class Fighter(BaseComponent):
         self.se = min(self.se, self.max_se)
         self.max_sp = self.extra_sp + self.constitution
         self.sp = min(self.sp, self.max_sp)
+
+    def add_damage_log_entry(self, entry: DamageLogEntry):
+        self.damage_log.append(entry)
+
+    # def update_damage_log_entry(self, existing_entry: DamageLogEntry, new_source_entity: Entity):
+    #     for entry in self.damage_log:
+    #         if entry == existing_entry:
+    #             entry.source_entity = new_source_entity
+    #             return
+
+    def create_damage_log(self, category: str, source_entity: Actor, details: str = None):
+        self.add_damage_log_entry(DamageLogEntry(category, source_entity, details))
+
+
+class DamageLogEntry:
+    def __init__(self, category: str, source_entity: Actor, details: str):
+        self.type = category
+        self.source_entity = source_entity
+        self.details = details

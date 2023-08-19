@@ -172,9 +172,9 @@ class MeleeAction(ActionWithDirection):
             self.engine.message_log.add_message(
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
+            self.entity.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                                  details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
-            if not target.is_alive and target is not self.engine.player:
-                self.entity.level.add_xp(target.level.xp_given)
         else:
             self.engine.message_log.add_message(
                 f"{attack_desc} but does no damage.", attack_color
@@ -204,9 +204,10 @@ class MeleeWeaponAction(ActionWithDirection):
             self.engine.message_log.add_message(
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
+            target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                             details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
-            if not target.is_alive and target is not self.engine.player:
-                self.entity.level.add_xp(target.level.xp_given)
+
         else:
             self.engine.message_log.add_message(
                 f"{attack_desc} but does no damage.", attack_color
@@ -476,9 +477,9 @@ class BowWeaponAction(ActionWithLocation):
             self.engine.message_log.add_message(
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
+            target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                             details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
-            if not target.is_alive and target is not self.engine.player:
-                self.entity.level.add_xp(target.level.xp_given)
         else:
             self.engine.message_log.add_message(
                 f"{attack_desc} but does no damage.", attack_color
@@ -523,9 +524,10 @@ class CrossbowWeaponAction(ActionWithLocation):
             self.engine.message_log.add_message(
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
+            target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                             details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
-            if not target.is_alive and target is not self.engine.player:
-                self.entity.level.add_xp(target.level.xp_given)
+
         else:
             self.engine.message_log.add_message(
                 f"{attack_desc} but does no damage.", attack_color
@@ -572,10 +574,9 @@ class GunWeaponAction(ActionWithLocation):
                 self.engine.message_log.add_message(
                     f"{attack_desc} for {damage} hit points.", attack_color
                 )
+                target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                                 details=f"{attack_desc} for {damage} hit points.")
                 target.fighter.hp -= damage
-                if not target.is_alive and target is not self.engine.player:
-                    self.entity.level.add_xp(target.level.xp_given)
-                    break
             else:
                 self.engine.message_log.add_message(
                     f"{attack_desc} but does no damage.", attack_color
@@ -595,7 +596,7 @@ class MagicWeaponAction(ActionWithLocation):
         weapon = self.entity.equipment.weapon
         if weapon and weapon.equippable.type == "Magic":
             if weapon.equippable.category == "Wand":
-                xy = self.x,self.y
+                xy = self.x, self.y
                 weapon.equippable.activate(xy)
             else:
                 self.time_cost = weapon.equippable.time_cost
@@ -622,9 +623,9 @@ class MagicWeaponAction(ActionWithLocation):
                     self.engine.message_log.add_message(
                         f"{attack_desc} for {damage} hit points.", attack_color
                     )
+                    target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+                                                     details=f"{attack_desc} for {damage} hit points.")
                     target.fighter.hp -= damage
-                    if not target.is_alive and target is not self.engine.player:
-                        self.entity.level.add_xp(target.level.xp_given)
                 else:
                     self.engine.message_log.add_message(
                         f"{attack_desc} but does no damage.", attack_color

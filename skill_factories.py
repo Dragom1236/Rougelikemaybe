@@ -207,8 +207,8 @@ from components.SkillComponent import ActiveSkill, CombatSingleTarget, CombatAoe
 #     ]
 # )
 
-fireball_child = CombatAoe(requires_handler=True, damage=5, radius=3, is_child=True)
-fireball_aoe = CombatAoe(requires_handler=True, units=[fireball_child, fireball_child], damage=25, radius=3,
+fireball_child = CombatAoe(damage=5, radius=3, is_child=True,is_ranged=True)
+fireball_aoe = CombatAoe(units=[fireball_child, fireball_child], damage=25, radius=3, is_ranged=True,
                          is_child=False)
 Fireball = ActiveSkill(name="Fireball",
                        description="A ball of fire",
@@ -219,7 +219,7 @@ Fireball = ActiveSkill(name="Fireball",
                        unit=fireball_aoe
                        )
 
-Arrow = CombatSingleTarget(requires_handler=True, is_ranged=True, damage=10)
+Arrow = CombatSingleTarget(is_ranged=True, damage=10)
 PowerShot = ActiveSkill(name="Power Shot",
                         description="A powerful shot from a bow.",
                         activation_requirements=[],
