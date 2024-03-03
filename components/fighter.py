@@ -99,11 +99,12 @@ class Fighter(BaseComponent):
         self.parent.ai = None
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = RenderOrder.CORPSE
-        most_recent_damage_entry = self.damage_log[-1]
-        attacker = most_recent_damage_entry.source_entity
-        if attacker.is_alive:
-            attacker.level.add_xp(self.parent.level.xp_given)
-        self.engine.message_log.add_message(death_message, death_message_color)
+        if self.parent != self.engine.player:
+            most_recent_damage_entry = self.damage_log[-1]
+            attacker = most_recent_damage_entry.source_entity
+            if attacker.is_alive:
+                attacker.level.add_xp(self.parent.level.xp_given)
+            self.engine.message_log.add_message(death_message, death_message_color)
 
     @property
     def mp(self) -> int:

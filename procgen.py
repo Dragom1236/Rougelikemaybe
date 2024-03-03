@@ -11,7 +11,7 @@ import tile_types
 
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Entity
+    from entity import Entity, Actor
 
 max_items_by_floor = [
     (1, 30),
@@ -27,7 +27,7 @@ max_monsters_by_floor = [
 item_chances: Dict[int, List[Tuple[Entity, int]]] = {
     0: [(entity_factories.health_potion, 35), (entity_factories.dagger, 5), (entity_factories.Wooden_Arrow, 35),
         (entity_factories.Pistol, 35), (entity_factories.Crossbow, 35), (entity_factories.iron_bullet, 35),
-        (entity_factories.Wooden_Bolt, 35),(entity_factories.Mage_Orb,10),(entity_factories.Wooden_Staff,10) ],
+        (entity_factories.Wooden_Bolt, 35), (entity_factories.Mage_Orb, 10), (entity_factories.Wooden_Staff, 10)],
     2: [(entity_factories.confusion_scroll, 100), (entity_factories.leather_armor, 5)],
     4: [(entity_factories.lightning_scroll, 25), (entity_factories.sword, 5)],
     6: [(entity_factories.fireball_scroll, 25), (entity_factories.chain_mail, 15)],
@@ -270,28 +270,28 @@ def create_corridors(rooms: List[RectangularRoom], corridors: List[Corridor]) ->
                 i += 1
                 # print("i", i)
                 if i == 1:
-                    intersection_data = Algorithim.dir_line_checker(midpoint, (0, -1), 30,
+                    intersection_data = Algorithim.dir_line_checker(midpoint, (0, -1), 35,
                                                                     rooms, corridors)
                     if intersection_data is None:
                         continue
                     intersection_object = intersection_data[0]
                     intersection_points = intersection_data[1]
                 elif i == 2:
-                    intersection_data = Algorithim.dir_line_checker(midpoint, (0, 1), 30,
+                    intersection_data = Algorithim.dir_line_checker(midpoint, (0, 1), 35,
                                                                     rooms, corridors)
                     if intersection_data is None:
                         continue
                     intersection_object = intersection_data[0]
                     intersection_points = intersection_data[1]
                 elif i == 3:
-                    intersection_data = Algorithim.dir_line_checker(midpoint, (-1, 0), 30,
+                    intersection_data = Algorithim.dir_line_checker(midpoint, (-1, 0), 35,
                                                                     rooms, corridors)
                     if intersection_data is None:
                         continue
                     intersection_object = intersection_data[0]
                     intersection_points = intersection_data[1]
                 else:
-                    intersection_data = Algorithim.dir_line_checker(midpoint, (1, 0), 30,
+                    intersection_data = Algorithim.dir_line_checker(midpoint, (1, 0), 35,
                                                                     rooms, corridors)
 
                     if intersection_data is None:
@@ -345,3 +345,4 @@ def place_entities(room: RectangularRoom, dungeon: GameMap, floor_number: int, )
         y = random.randint(room.y1 + 1, room.y2 - 1)
         if not any(other.x == x and other.y == y for other in dungeon.entities):
             entity.spawn(dungeon, x, y)
+

@@ -7,12 +7,58 @@ import numpy as np
 
 import actions
 from components.base_component import BaseComponent
+from damageType import ElementalType
+from damagecalc import DamageCalculator
 from exceptions import Impossible
 from input_handlers import AreaRangedAttackHandler, SingleRangedAttackHandler
 
 if TYPE_CHECKING:
     from entity import Actor
     from components.Status import StatusEffect
+
+
+class DamageComponent:
+    pass
+
+
+class BaseDamageComponent(DamageComponent):
+    def __init__(self, value):
+        self.value = value
+        self.category = "Base"
+
+    def apply(self, user):
+        return self.value
+
+
+class ScalingDamageComponent(DamageComponent):
+    def __init__(self, coefficient, stat, minimum=1):
+        self.coefficient = coefficient
+        self.stat = stat
+        self.minimum = minimum
+        self.category = "Scaling"
+
+    def apply(self, user):
+        value = self.coefficient * getattr(user.fighter, self.stat)
+        if value > self.minimum:
+            return value
+        else:
+            return self.minimum
+
+
+class StatModComponent(DamageComponent):
+    def __init__(self, fixed, divisor, stat, minimum=0):
+        self.fixed = fixed
+        self.divisor = divisor
+        self.stat = stat
+        self.minimum = minimum
+        self.category = "Modifier"
+
+    def apply(self, user):
+        mod = getattr(user.fighter, self.stat) / self.divisor
+        if mod > self.minimum:
+            return self.fixed * mod
+        else:
+            return self.fixed * self.minimum
 
 
 class Skill:
@@ -58,18 +104,38 @@ class Unit:
 class CombatUnit(Unit):
     owner: ActiveSkill
 
-    def __init__(self, units: List[Unit] = None, damage: int = 0, is_ranged=None,
+    def __init__(self, damage_type: ElementalType,
+                 damage_components: List[Union[BaseDamageComponent, ScalingDamageComponent, StatModComponent]],
+                 max_damage: int,
+                 units: List[Unit] = None,
+                 is_ranged=None,
                  is_child=False):
         super().__init__(units, is_child)
-        self.damage = damage
+        self.max_damage = max_damage
+        self.damage_components = damage_components
         self.is_ranged = is_ranged
         self.type = "Combat"
+        self.damage_type = damage_type
+
+    def calculate_base_damage(self, damage_components: List[
+        Union[BaseDamageComponent, ScalingDamageComponent, StatModComponent]]):
+        damage = 0
+        for component in damage_components:
+            damage += component.apply(self.user)
+        if damage > self.max_damage:
+            return self.max_damage
+        else:
+            return damage
 
 
 class CombatAoe(CombatUnit):
-    def __init__(self, units: List[Union[CombatAoe]] = None, damage: int = 0, is_ranged=None,
+    def __init__(self, damage_type: ElementalType,
+                 damage_components: List[Union[BaseDamageComponent, ScalingDamageComponent, StatModComponent]],
+                 max_damage: int,
+                 units: List[Union[CombatAoe]] = None,
+                 is_ranged=None,
                  radius: int = 2, is_child=False):
-        super().__init__(units, damage, is_ranged, is_child=is_child)
+        super().__init__(damage_type, damage_components, max_damage, units, is_ranged, is_child=is_child)
         self.radius = radius
         self.type = "Combat"
 
@@ -87,6 +153,7 @@ class CombatAoe(CombatUnit):
 
     def execute(self, xy=None):
         # Ensuring only ranged AOEs use this logic
+        weapon = self.user.equipment.weapon
         if xy and self.is_ranged:
             x, y = xy
             if not self.user.gamemap.visible[xy]:
@@ -95,12 +162,17 @@ class CombatAoe(CombatUnit):
             targets_hit = False
             for actor in self.user.gamemap.actors:
                 if actor.distance(x, y) <= self.radius:
+                    if weapon:
+                        if weapon.equippable.type != "Magic":
+                            weapon = None
+                    damageCalc = DamageCalculator(self.user, "Magic", actor, weapon, self.owner, self)
+                    damage = damageCalc.calculate_damage()
                     actor.gamemap.engine.message_log.add_message(
-                        f"The {actor.name} is engulfed in a fiery explosion, taking {self.damage} damage!"
+                        f"The {actor.name} is engulfed in a fiery explosion, taking {damage} damage!"
                     )
                     actor.fighter.create_damage_log(category="Attack", source_entity=self.user,
-                                                    details=f"The {actor.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
-                    actor.fighter.take_damage(self.damage)
+                                                    details=f"The {actor.name} is engulfed in a fiery explosion, taking {damage} damage!")
+                    actor.fighter.take_damage(damage)
                     targets_hit = True
 
             if not targets_hit:
@@ -118,11 +190,15 @@ class CombatAoe(CombatUnit):
                     distance = self.user.distance(target.x, target.y)
                     if distance <= 1:
                         # Since it's melee, defense is used.
-                        calculated_damage = self.damage - target.fighter.defense
-                        if calculated_damage > 0:
+                        if weapon:
+                            if weapon.equippable.type != "Melee":
+                                weapon = None
+                        damageCalc = DamageCalculator(self.user, "Melee", target, weapon, self.owner, self)
+                        damage = damageCalc.calculate_damage()
+                        if damage > 0:
                             target.fighter.create_damage_log(category="Attack", source_entity=self.user,
-                                                             details=f"The {target.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
-                            target.fighter.hp -= calculated_damage
+                                                             details=f"The {target.name} is engulfed in a fiery explosion, taking {damage} damage!")
+                            target.fighter.hp -= damage
             if self.units:
                 for unit in self.units:
                     unit.execute(xy)
@@ -132,10 +208,13 @@ class CombatAoe(CombatUnit):
 
 
 class CombatSingleTarget(CombatUnit):
-    def __init__(self, units: List[Union[CombatAoe]] = None,
+    def __init__(self, damage_type: ElementalType,
+                 damage_components: List[Union[BaseDamageComponent, ScalingDamageComponent, StatModComponent]],
+                 max_damage: int,
+                 units: List[Union[CombatAoe]] = None,
                  turn_units: List[Union[CombatAoe]] = None,
-                 damage: int = 0, is_ranged=None, is_child=False, num_hits: int = 1, radius: int = None):
-        super().__init__(units, damage, is_ranged, is_child=is_child)
+                 is_ranged=None, is_child=False, num_hits: int = 1, radius: int = None):
+        super().__init__(damage_type, damage_components, max_damage, units, is_ranged, is_child=is_child)
         self.radius = radius
         self.type = "Combat"
         self.turn_units = turn_units
@@ -166,12 +245,18 @@ class CombatSingleTarget(CombatUnit):
                 raise Impossible("You cannot target yourself!")
             if target:
                 if target.is_alive:
+                    weapon = self.user.equipment.weapon
+                    if weapon:
+                        if weapon.equippable.type == "Melee":
+                            weapon = None
+                    damageCalc = DamageCalculator(self.user, "Ranged", target, weapon, self.owner, self)
+                    damage = damageCalc.calculate_damage()
                     target.gamemap.engine.message_log.add_message(
-                        f"The {target.name} is hit, taking {self.damage} damage!"
+                        f"The {target.name} is hit, taking {damage} damage!"
                     )
                     target.fighter.create_damage_log(category="Attack", source_entity=self.user,
-                                                     details=f"The {target.name} is engulfed in a fiery explosion, taking {self.damage} damage!")
-                    target.fighter.take_damage(self.damage)
+                                                     details=f"The {target.name} is engulfed in a fiery explosion, taking {damage} damage!")
+                    target.fighter.take_damage(damage)
                 if self.units:
                     for unit in self.units:
                         unit.execute(xy)
