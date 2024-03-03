@@ -2,21 +2,24 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Tuple, TypeVar, TYPE_CHECKING, Optional, Type, Union
+from typing import Tuple, TypeVar, TYPE_CHECKING, Optional, Type, Union, List
 
 from tcod.map import compute_fov
 
-
+from components.Faction import FactionComponent
+from components.Personality import Personality
+from damageType import ElementalType
+from effect_factories import natural_regeneration_effect
 from render_order import RenderOrder
 
 if TYPE_CHECKING:
     from game_map import GameMap
-    from components.ai import BaseAI
+    from components.ai import BaseAI, GeneralAI
     from components.fighter import Fighter
     from components.inventory import Inventory
     from components.consumable import Consumable
     from components.equippable import Equippable, Accessory, RangedWeapon, Armor, Weapon, Bow, Container, Crossbow, Gun, \
-    MagicWeapon, Wand
+        MagicWeapon, Wand
     from components.equipment import Equipment
     from components.Status import StatusEffectManager
     from components.conditions import ConditionManager
@@ -111,12 +114,18 @@ class Actor(Entity):
             conditions_manager: ConditionManager,
             status_effect_manager: StatusEffectManager,
             abilities: Abilities,
-            race:Race,
+            race: Race,
+            starting_faction: Tuple[List[str]:List[str]] = None,
+            faction_manager: FactionComponent,
+            personality: Personality,
+            personality_traits: Optional[Union[Tuple[str:int], List[Tuple[str:int]]]] = None,
+            preferences: Optional[Union[Tuple[str:int], List[Tuple[str:int]]]] = None,
     ):
         super().__init__(x=x, y=y, char=char, color=color, name=name, blocks_movement=True,
                          render_order=RenderOrder.ACTOR)
 
-        self.ai: Optional[BaseAI] = ai_cls(self)
+
+        self.ai: Optional[Union[BaseAI, GeneralAI]] = ai_cls(self)
 
         self.fighter = fighter
         self.fighter.parent = self
@@ -124,6 +133,7 @@ class Actor(Entity):
         self.inventory.parent = self
         self.status_effect_manager = status_effect_manager
         self.status_effect_manager.parent = self
+        self.status_effect_manager.add_effect(natural_regeneration_effect)
         self.level = level
         self.level.parent = self
         self.conditions_manager = conditions_manager
@@ -134,8 +144,39 @@ class Actor(Entity):
         self.equipment.parent = self
         self.race = race
         self.race.parent = self
+        self.faction_manager = faction_manager
+        faction_manager.parent = self
+        self.personality = personality
+        self.personality.parent = self
+        if starting_faction:
+            self.faction_manager.member_factions.update(starting_faction[0])
+            self.faction_manager.hostile_factions.update(starting_faction[1])
+        if personality_traits:
+            if isinstance(personality_traits, list):
+                for trait in personality_traits:
+                    self.personality.add_trait(trait[0], trait[1])
+            else:
+                self.personality.add_trait(personality_traits[0], personality_traits[1])
+        if preferences:
+            if isinstance(preferences, list):
+                for preference in preferences:
+                    self.personality.add_preference(preference[0], preference[1])
+            else:
+                self.personality.add_preference(preferences[0], preferences[1])
         self.fighter.set_stats()
         self.level.override_level_info()
+        self.elemental_type = race.elemental_type
+        self.faction_manager.init_racial_faction()
+
+    def spawn(self: T, gamemap: GameMap, x: int, y: int) -> T:
+        super().spawn(gamemap, x, y)
+        if gamemap:
+            if hasattr(self, "parent"):  # Possibly uninitialized.
+                if self.parent is self.gamemap:
+                    self.gamemap.entities.remove(self)
+            self.parent = gamemap
+            gamemap.entities.add(self)
+
 
     @property
     def is_alive(self) -> bool:
@@ -182,7 +223,7 @@ class Item(Entity):
             consumable: Optional[Consumable] = None,
             equippable: Optional[
                 Union[
-                    Equippable, Weapon, Armor, Accessory, RangedWeapon, Bow, Crossbow, Gun, MagicWeapon,Wand, Container]] = None,
+                    Equippable, Weapon, Armor, Accessory, RangedWeapon, Bow, Crossbow, Gun, MagicWeapon, Wand, Container]] = None,
             ammo: Optional[Ammo] = None
     ):
         super().__init__(

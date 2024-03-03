@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, TYPE_CHECKING, Optional, Iterator
+from typing import Iterable, TYPE_CHECKING, Optional, Iterator, List
 
 import numpy as np  # type: ignore
 from tcod.console import Console
@@ -8,9 +8,11 @@ from entity import Actor, Item
 import tile_types
 from exceptions import Impossible
 
+
 if TYPE_CHECKING:
     from entity import Entity
     from engine import Engine
+    from procgen import RectangularRoom
 
 
 class GameMap:
@@ -27,7 +29,7 @@ class GameMap:
         self.explored = np.full(
             (width, height), fill_value=False, order="F"
         )  # Tiles the player has seen before
-        self.rooms = []
+        self.rooms:List[RectangularRoom] = []
         self.corridors = []
         self.downstairs_location = (0, 0)
         self.upstairs_location = (0, 0)
@@ -97,7 +99,7 @@ class GameMap:
             self.entities, key=lambda x: x.render_order.value
         )
         for entity in entities_sorted_for_rendering:
-            # Only print entities that are in the FOV
+            # # Only print entities that are in the FOV
             if self.visible[entity.x, entity.y]:
                 console.print(
                     x=entity.x, y=entity.y, string=entity.char, fg=entity.color

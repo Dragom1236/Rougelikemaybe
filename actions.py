@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Tuple, Optional
 
 import color
 import exceptions
+from damagecalc import DamageCalculator
 
 if TYPE_CHECKING:
     from engine import Engine
@@ -19,6 +20,10 @@ class Action:
     @property
     def cost(self) -> float:
         return self.time_cost
+
+    def can_perform(self):
+        if self.entity.fighter.time>self.cost:
+            return True
 
     @property
     def engine(self) -> Engine:
@@ -160,8 +165,13 @@ class MeleeAction(ActionWithDirection):
 
         if not target:
             raise exceptions.Impossible("Nothing to attack.")
+        elif target == self.entity:
+            raise exceptions.Impossible("Can't target yourself!")
+        if target == self.entity:
+            print("I'm hurting myself :(")
 
-        damage = self.entity.fighter.power - target.fighter.defense
+        damageCalculator = DamageCalculator(self.entity, "Melee", self.target_actor)
+        damage = damageCalculator.calculate_damage()
 
         attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
         if self.entity is self.engine.player:
@@ -172,7 +182,7 @@ class MeleeAction(ActionWithDirection):
             self.engine.message_log.add_message(
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
-            self.entity.fighter.create_damage_log(category="Attack", source_entity=self.entity,
+            target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
                                                   details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
         else:
@@ -191,8 +201,10 @@ class MeleeWeaponAction(ActionWithDirection):
 
         if not target:
             raise exceptions.Impossible("Nothing to attack.")
-
-        damage = self.entity.equipment.weapon.equippable.roll_damage() + self.entity.fighter.power - target.fighter.defense
+        elif target == self.entity:
+            raise exceptions.Impossible("Can't target yourself!")
+        damageCalculator = DamageCalculator(self.entity,"Melee",self.target_actor,self.entity.equipment.weapon)
+        damage = damageCalculator.calculate_damage()
 
         attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
         if self.entity is self.engine.player:
@@ -226,6 +238,8 @@ class BumpAction(ActionWithDirection):
         melee_action = MeleeAction(self.entity, self.dx, self.dy)
         movement_action = MovementAction(self.entity, self.dx, self.dy)
         if self.target_actor:
+            if self.target_actor == self.entity:
+                raise exceptions.Impossible("Can't target yourself!")
             if weapon_action:
                 if self.entity.fighter.time >= weapon_action.time_cost:
                     return weapon_action.perform()
@@ -294,6 +308,11 @@ class PickupAction(Action):
         super().__init__(entity, time_cost=0.5)
 
     def perform(self) -> None:
+        name = ""
+        if self.entity == self.engine.player:
+            name = "You"
+        else:
+            name = self.entity.name
         actor_location_x = self.entity.x
         actor_location_y = self.entity.y
         inventory = self.entity.inventory
@@ -317,14 +336,14 @@ class PickupAction(Action):
                             item.parent = self.entity.inventory
                             inventory.items.append(item)
                         if item.ammo.stacks > 1:
-                            self.engine.message_log.add_message(f"You picked up {item.ammo.stacks} {item.name}s!")
+                            self.engine.message_log.add_message(f"{name} picked up {item.ammo.stacks} {item.name}s!")
                         else:
-                            self.engine.message_log.add_message(f"You picked up the {item.name}!")
+                            self.engine.message_log.add_message(f"{name} picked up the {item.name}!")
 
                     else:
                         item.parent = self.entity.inventory
                         inventory.items.append(item)
-                        self.engine.message_log.add_message(f"You picked up the {item.name}!")
+                        self.engine.message_log.add_message(f"{name} picked up the {item.name}!")
                     self.entity.fighter.time = self.entity.fighter.time - self.cost
                     return
         else:
@@ -464,7 +483,8 @@ class BowWeaponAction(ActionWithLocation):
         if ammo.stacks <= 0:
             self.entity.equipment.back.equippable.items.remove(item)
         print(ammo)
-        damage = weapon.equippable.roll_damage() + ammo.damage - target.fighter.defense
+        damageCalculator = DamageCalculator(self.entity, "Ranged", self.target_actor, self.entity.equipment.weapon,ammo=item)
+        damage = damageCalculator.calculate_damage()
         print("Damage", damage)
 
         attack_desc = f"{self.entity.name.capitalize()} shoots {target.name}"
@@ -511,7 +531,9 @@ class CrossbowWeaponAction(ActionWithLocation):
         if ammo.stacks <= 0:
             self.entity.equipment.weapon.equippable.current_ammo.remove(item)
         print(ammo)
-        damage = weapon.equippable.roll_damage() + ammo.damage - target.fighter.defense
+        damageCalculator = DamageCalculator(self.entity, "Ranged", self.target_actor, self.entity.equipment.weapon,
+                                            ammo=item)
+        damage = damageCalculator.calculate_damage()
         print("Damage", damage)
 
         attack_desc = f"{self.entity.name.capitalize()} shoots {target.name}"
@@ -554,14 +576,16 @@ class GunWeaponAction(ActionWithLocation):
                 self.entity.equipment.weapon.equippable.current_ammo.remove(item)
         if not self.entity.equipment.weapon.equippable.current_ammo:
             raise exceptions.Impossible("No ammo.")
-        while total_time_cost < self.entity.fighter.time and weapon.equippable.num_of_ammo > 0:
+        while total_time_cost < self.entity.fighter.time and weapon.equippable.num_of_ammo > 0 and self.target_actor.fighter.hp>0:
             item = self.entity.equipment.weapon.equippable.current_ammo[0]
             ammo = item.ammo
             ammo.stacks -= 1
             if ammo.stacks <= 0:
                 self.entity.equipment.weapon.equippable.current_ammo.remove(item)
             print(ammo)
-            damage = weapon.equippable.roll_damage() + ammo.damage - target.fighter.defense
+            damageCalculator = DamageCalculator(self.entity, "Ranged", self.target_actor, self.entity.equipment.weapon,
+                                                ammo=item)
+            damage = damageCalculator.calculate_damage()
             print("Damage", damage)
 
             attack_desc = f"{self.entity.name.capitalize()} shoots {target.name}"
@@ -611,7 +635,9 @@ class MagicWeaponAction(ActionWithLocation):
                     raise exceptions.Impossible("Nothing to attack.")
                 elif target == self.entity:
                     raise exceptions.Impossible("You can't target yourself.")
-                damage = weapon.equippable.roll_damage() + self.entity.fighter.magical_attack - target.fighter.magical_defense
+                damageCalculator = DamageCalculator(self.entity, "Magic", self.target_actor,
+                                                    self.entity.equipment.weapon,)
+                damage = damageCalculator.calculate_damage()
 
                 attack_desc = f"{self.entity.name.capitalize()} fires magic energy at {target.name}"
                 if self.entity is self.engine.player:

@@ -49,7 +49,10 @@ class StatusEffectManager(BaseComponent):
             if effect.duration <= 0 and not effect.permanent:
                 effects_to_remove.append(effect)
             else:
-                effect.tick_effect(self.parent)  # Call tick_effect for active effects
+                if effect.delay == 0:
+                    effect.tick_effect(self.parent)
+                    if effect.can_delay:
+                        effect.delay = effect.max_delay# Call tick_effect for active effects
 
         for effect in effects_to_remove:
             self.remove_effect(effect)
@@ -60,6 +63,7 @@ class StatusEffect:
                  duration: int,
                  modifier_data: dict,
                  cot_effect_data: dict,
+                 Type:str = "other",
                  conditions: List[Condition] = None,
                  permanent: bool = False,
                  can_delay: bool = False,
@@ -69,10 +73,12 @@ class StatusEffect:
         self.modifier_data = modifier_data.copy()
         self.cot_effect_data = cot_effect_data.copy()
         self.stacks = 1
+        self.type = Type
         self.conditions = conditions
         self.permanent = permanent
         self.can_delay = can_delay
         self.delay = delay
+        self.max_delay = delay
 
     def apply_effect(self, entity: Actor):
         # Apply the modifiers to the parent based on the modifier_data
@@ -98,10 +104,9 @@ class StatusEffect:
     def tick_effect(self, entity: Actor):
         # Perform the appropriate action every turn for change-over-time effects
         if "hp_change_per_turn" in self.cot_effect_data:
-            # print("My hp should have reduced.")
-            # print(parent.fighter.hp)
             entity.fighter.modify_hp(self.cot_effect_data["hp_change_per_turn"] * self.stacks)
-            # print(parent.fighter.hp)
+        if "mp_change_per_turn" in self.cot_effect_data:
+            entity.fighter.modify_mp(self.cot_effect_data["mp_change_per_turn"] * self.stacks)
 
         # Add more conditions here to handle other change-over-time effect types
 
