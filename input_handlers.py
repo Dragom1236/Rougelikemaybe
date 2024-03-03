@@ -399,9 +399,8 @@ class InventoryEventHandler(AskUserEventHandler):
                         item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity} (E)"
                     else:
                         item_string = f"{item_string} (E)"
-                elif item.equippable:
-                    if item.equippable.equipment_type == EquipmentType.Container:
-                        item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
+                elif item.equippable.equipment_type == EquipmentType.Container:
+                    item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
                 else:
                     item_string = f"({item_key}) {item.name}"
 

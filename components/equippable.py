@@ -6,14 +6,12 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 import actions
 from components.base_component import BaseComponent
-from damageType import normal
 from equipment_types import EquipmentType
 
 if TYPE_CHECKING:
     from entity import Item, Actor
     from enchantment import Enchantment
     from components.SkillComponent import Skill, ActiveSkill
-    from damageType import ElementalType
 
 
 class Equippable(BaseComponent):
@@ -24,7 +22,6 @@ class Equippable(BaseComponent):
         self.rarity = rarity
         self.enchantments = []  # List of enchantments
         self.combat_rating = 0
-        self.elemental_type: ElementalType = normal
 
     def add_enchantment(self, enchantment: Enchantment) -> None:
         self.enchantments.append(enchantment)

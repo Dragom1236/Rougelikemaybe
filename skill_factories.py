@@ -1,7 +1,5 @@
 # Define some damage values for the skills
-from components.SkillComponent import ActiveSkill, CombatSingleTarget, CombatAoe, BaseDamageComponent, \
-    ScalingDamageComponent, StatModComponent
-from damageType import fire, normal
+from components.SkillComponent import ActiveSkill, CombatSingleTarget, CombatAoe
 
 # melee_damage = 20
 # ranged_damage = 15
@@ -208,22 +206,10 @@ from damageType import fire, normal
 #         CombatAoe(is_ranged=True, radius=3, damage=25, status_units=[curse_status_unit])
 #     ]
 # )
-base_damage_10 = BaseDamageComponent(10)
-base_damage_5 = BaseDamageComponent(5)
-base_damage_15 = BaseDamageComponent(15)
-base_damage_20 = BaseDamageComponent(20)
-base_damage_25 = BaseDamageComponent(25)
-scaling_damage_1 = ScalingDamageComponent(0.2, "strength", 1)
-scaling_damage_2 = ScalingDamageComponent(0.2, "dexterity", 1)
-scaling_damage_3 = ScalingDamageComponent(0.2, "magic", 1)
-stat_mod_1 = StatModComponent(5, 20, "strength", 1)
-stat_mod_2 = StatModComponent(5, 20, "dexterity", 1)
-stat_mod_3 = StatModComponent(5, 20, "magic", 1)
 
-fireball_child = CombatAoe(damage_components=[base_damage_5], radius=3, is_child=True, is_ranged=True, damage_type=fire,max_damage=5)
-fireball_aoe = CombatAoe(units=[fireball_child, fireball_child],
-                         damage_components=[base_damage_15,scaling_damage_3,stat_mod_3], radius=3, is_ranged=True,
-                         is_child=False, damage_type=fire,max_damage=80)
+fireball_child = CombatAoe(damage=5, radius=3, is_child=True,is_ranged=True)
+fireball_aoe = CombatAoe(units=[fireball_child, fireball_child], damage=25, radius=3, is_ranged=True,
+                         is_child=False)
 Fireball = ActiveSkill(name="Fireball",
                        description="A ball of fire",
                        activation_requirements=[],
@@ -233,8 +219,7 @@ Fireball = ActiveSkill(name="Fireball",
                        unit=fireball_aoe
                        )
 
-Arrow = CombatSingleTarget(is_ranged=True, damage_components=[base_damage_5,scaling_damage_2],
-                           damage_type=normal,max_damage=50)
+Arrow = CombatSingleTarget(is_ranged=True, damage=10)
 PowerShot = ActiveSkill(name="Power Shot",
                         description="A powerful shot from a bow.",
                         activation_requirements=[],

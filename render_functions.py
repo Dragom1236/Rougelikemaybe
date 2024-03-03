@@ -114,6 +114,6 @@ def render_equipment_details(console: Console, player: Actor):
                 if weapon.equippable.active_skill:
                     console.print(x=58, y=47, string=f"Active Spell: {weapon.equippable.active_skill.name}")
                     if weapon.equippable.active_skill.unit.type == "Combat":
-                        console.print(x=58, y=48, string=f"Damage:{weapon.equippable.active_skill.unit.calculate_base_damage(weapon.equippable.active_skill.unit.damage_components)}")
+                        console.print(x=58, y=48, string=f"Damage:{weapon.equippable.active_skill.unit.damage}")
 
 

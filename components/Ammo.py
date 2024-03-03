@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 from typing import List, TYPE_CHECKING
 from components.base_component import BaseComponent
-from damageType import normal, ElementalType
 
 if TYPE_CHECKING:
     from components.Status import StatusEffect
@@ -18,7 +17,6 @@ class Ammo(BaseComponent):
         self.effects = effects or []
         self.stacks = stacks
         self.category = category
-        self.damage_type: ElementalType = normal
 
     def on_hit_effects(self, target: Actor):
         # Implement logic to trigger any effects when the ammo hits the target
