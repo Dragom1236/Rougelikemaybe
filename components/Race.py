@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Union, Optional, Tuple
+from typing import TYPE_CHECKING, List, Union
 
 import numpy as np  # type: ignore
-
-from damageType import ElementalType, normal
 
 if TYPE_CHECKING:
     from entity import Actor
@@ -19,9 +17,7 @@ class Race(BaseComponent):
     def __init__(self, strength: int, dexterity: int, agility: int,
                  constitution: int, magic: int, awareness: int, charisma: int,
                  level_up_base: int, level_up_factor: int, xp_given: int,
-                 skills: List[Union[Skill, ActiveSkill]],
-                 type: Tuple[ElementalType, ElementalType] = (normal,normal),
-                 starting_faction: Tuple[List[str]:List[str]] = None):
+                 skills: List[Union[Skill, ActiveSkill]]):
         self.strength = strength
         self.dexterity = dexterity
         self.agility = agility
@@ -33,6 +29,3 @@ class Race(BaseComponent):
         self.level_up_factor = level_up_factor
         self.xp_given = xp_given
         self.skills: List[Union[Skill, ActiveSkill]] = skills
-        self.factions = starting_faction
-        self.elemental_type = type
-

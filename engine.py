@@ -11,7 +11,6 @@ from tcod.map import compute_fov
 import color
 import exceptions
 import render_functions
-from faction_factories import humanoid_faction, demihuman_faction, monster_faction
 from message_log import MessageLog
 
 if TYPE_CHECKING:
@@ -36,12 +35,11 @@ class Engine:
                 try:
                     if entity.fighter.time > 0:
                         while entity.fighter.time > 0:
-                            if entity.ai:
-                                entity.ai.perform()
-                                if entity.level.requires_level_up:
-                                    level_up_options = entity.level.level_up_options
-                                    level_up_option = random.choice(level_up_options)
-                                    level_up_option()
+                            entity.ai.perform()
+                            if entity.level.requires_level_up:
+                                level_up_options = entity.level.level_up_options
+                                level_up_option = random.choice(level_up_options)
+                                level_up_option()
                 except exceptions.Impossible:
                     pass  # Ignore impossible action exceptions from AI.
                 # parent.status_effect_manager.add_effect(regeneration_effect)

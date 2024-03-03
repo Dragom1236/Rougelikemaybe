@@ -1,10 +1,8 @@
 import components
 from components import consumable, equippable_factories
-from components.Faction import FactionComponent
-from components.Personality import Personality
 from components.SkillComponent import Abilities
 from components.Status import StatusEffectManager
-from components.ai import GeneralAI, FleeingAI, HostileEnemy
+from components.ai import HostileEnemy, FleeingAI
 import race_factories
 from components.conditions import ConditionManager
 from components.equipment import Equipment
@@ -21,15 +19,13 @@ player = Actor(
     name="Player",
     ai_cls=HostileEnemy,
     race=race_factories.human_race,
-    fighter=Fighter(hp=70, mp=20, se=1, sp=25, ),
+    fighter=Fighter(hp=70, mp=20, se=1, sp=25,),
     inventory=Inventory(capacity=26),
     status_effect_manager=StatusEffectManager(),
     level=Level(level_up_base=200),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
-    faction_manager=FactionComponent(),
-    personality=Personality(),
 
     # strength default is 10, constitution is 10 or 20, awareness is 16
 )
@@ -37,74 +33,45 @@ orc = Actor(
     char="o",
     color=(63, 127, 63),
     name="Orc",
-    ai_cls=GeneralAI,
+    ai_cls=HostileEnemy,
     race=race_factories.orc_race,
-    fighter=Fighter(hp=0, mp=0, se=0, sp=0, ),
+    fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
     inventory=Inventory(capacity=1),
     level=Level(level_up_base=150, xp_given=50),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
-    faction_manager=FactionComponent(),
-    personality=Personality(),
-    preferences=("melee_weapon", 100)
-)
-
-goblin = Actor(
-    char="g",
-    color=(63, 127, 63),
-    name="Goblin",
-    ai_cls=GeneralAI,
-    race=race_factories.goblin_race,
-    fighter=Fighter(hp=0, mp=0, se=0, sp=0, ),
-    status_effect_manager=StatusEffectManager(),
-    inventory=Inventory(capacity=1),
-    level=Level(level_up_base=150, xp_given=50),
-    equipment=Equipment(),
-    conditions_manager=ConditionManager(),
-    abilities=Abilities(),
-    faction_manager=FactionComponent(),
-    personality=Personality(),
-    personality_traits=("Fearful",30),
-    preferences=("ranged_weapon", 100)
 )
 
 kobold = Actor(
     char="k",
     color=(125, 42, 42),
     name="Kobold",
-    ai_cls=GeneralAI,
+    ai_cls=FleeingAI,
     race=race_factories.kobold_race,
-    fighter=Fighter(hp=0, mp=0, se=0, sp=0, ),
+    fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
     inventory=Inventory(capacity=2),
     level=Level(level_up_base=50, xp_given=10),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
-    faction_manager=FactionComponent(),
-    personality=Personality(),
-    personality_traits=("Fearful",70), # Should be 70
-    preferences=[("melee_weapon", 50), ("ranged_weapon", 100)],
 )
 
 troll = Actor(
     char="T",
     color=(0, 127, 0),
     name="Troll",
-    ai_cls=GeneralAI,
+    ai_cls=HostileEnemy,
     race=race_factories.troll_race,
-    fighter=Fighter(hp=10, mp=0, se=0, sp=0, ),
+    fighter=Fighter(hp=10, mp=0, se=0, sp=0,),
     inventory=Inventory(capacity=3),
     status_effect_manager=StatusEffectManager(),
     level=Level(level_up_base=250, xp_given=100),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
     abilities=Abilities(),
-    faction_manager=FactionComponent(),
-    personality=Personality(),
-    preferences=("no_weapon", 100)
 )
 
 health_potion = Item(
@@ -171,5 +138,4 @@ Wooden_Staff = Item(char="|", color=(160, 82, 45), name="Staff", equippable=equi
 
 Mage_Orb = Item(char="*", color=(0, 0, 255), name="Mage Orb", equippable=equippable_factories.mage_orb)
 
-Fireball_Wand = Item(char="~", color=(255, 30, 0), name="Wand of Fireball",
-                     equippable=equippable_factories.fireball_wand)
+Fireball_Wand = Item(char="~", color=(255, 30, 0), name="Wand of Fireball", equippable=equippable_factories.fireball_wand)

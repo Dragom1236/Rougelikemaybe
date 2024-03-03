@@ -21,7 +21,6 @@ strength_buff_effect = StatusEffect(
 poison_effect = StatusEffect(
     name="Poison",
     duration=4,
-    Type = "harmful",
     modifier_data={},
     cot_effect_data={"hp_change_per_turn": -10},
 )
@@ -34,22 +33,10 @@ regeneration_effect = StatusEffect(
     cot_effect_data={"hp_change_per_turn": 10},
 )
 
-# Regeneration Effect
-natural_regeneration_effect = StatusEffect(
-    name="Regeneration",
-    duration=6,
-    permanent=True,
-    can_delay=True,
-    delay=2,
-    modifier_data={},
-    cot_effect_data={"hp_change_per_turn": 4, "mp_change_per_turn": 2},
-)
-
 # Slow Effect
 slow_effect = StatusEffect(
     name="Slow",
     duration=4,
-    Type = "harmful",
     modifier_data={"agility_modifier": -5},
     cot_effect_data={},
 )
@@ -58,7 +45,6 @@ slow_effect = StatusEffect(
 bleed_effect = StatusEffect(
     name="Bleed",
     duration=3,
-    Type = "harmful",
     modifier_data={"strength_modifier": -4},
     cot_effect_data={"hp_change_per_turn": -5},
 )
@@ -67,7 +53,6 @@ bleed_effect = StatusEffect(
 burn_effect = StatusEffect(
     name="Burn",
     duration=3,
-    Type="harmful",
     modifier_data={},
     cot_effect_data={"hp_change_per_turn": -8},
 )
@@ -76,7 +61,6 @@ burn_effect = StatusEffect(
 weaken_effect = StatusEffect(
     name="Weaken",
     duration=4,
-    Type="harmful",
     modifier_data={"strength_modifier": -5, "agility_modifier": -5},
     cot_effect_data={},
 )
@@ -85,7 +69,6 @@ weaken_effect = StatusEffect(
 stun_effect = StatusEffect(
     name="Stun",
     duration=1,
-    Type="harmful",
     conditions=[stun],
     modifier_data={},
     cot_effect_data={},
@@ -95,7 +78,6 @@ stun_effect = StatusEffect(
 curse_effect = StatusEffect(
     name="Curse",
     duration=5,
-    Type="harmful",
     modifier_data={"strength_modifier": -5, "agility_modifier": -5, "hp_modifier": -20},
     cot_effect_data={},
 )

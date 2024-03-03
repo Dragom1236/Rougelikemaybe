@@ -65,7 +65,7 @@ class Equipment(BaseComponent):
     def unequip_from_slot(self, slot: str, add_message: bool) -> None:
         current_item = getattr(self, slot)
         if current_item.equippable.equipment_type == EquipmentType.WEAPON:
-            if current_item.equippable.elemental_type == "Magic":
+            if current_item.equippable.type == "Magic":
                 if current_item.equippable.category == "Wand":
                     current_item.equippable.update_manager()
 
