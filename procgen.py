@@ -123,6 +123,13 @@ class RectangularRoom:
                 and self.y2 >= other.y1
         )
 
+    def point_intersects(self, other: Tuple) -> bool:
+        """Return True if this room overlaps with another RectangularRoom."""
+        return (
+                self.x1 <= other[0] <= self.x2
+                and self.y1 <= other[1] <= self.y2
+        )
+
 
 class Corridor:
     def __init__(self, start: Tuple[int, int], end: Tuple[int, int], points: List[Tuple[int, int]]):
@@ -345,4 +352,3 @@ def place_entities(room: RectangularRoom, dungeon: GameMap, floor_number: int, )
         y = random.randint(room.y1 + 1, room.y2 - 1)
         if not any(other.x == x and other.y == y for other in dungeon.entities):
             entity.spawn(dungeon, x, y)
-

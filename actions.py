@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Tuple, Optional
 
 import color
 import exceptions
+import tile_types
 from damagecalc import DamageCalculator
 
 if TYPE_CHECKING:
@@ -12,17 +13,17 @@ if TYPE_CHECKING:
 
 
 class Action:
-    def __init__(self, entity: Actor, time_cost: float | int = 0) -> None:
+    def __init__(self, entity: Actor, uses_action: bool = True) -> None:
         super().__init__()
         self.entity = entity
-        self.time_cost = time_cost
+        self.uses_action: bool = uses_action
 
     @property
     def cost(self) -> float:
-        return self.time_cost
+        return self.uses_action
 
     def can_perform(self):
-        if self.entity.fighter.time>self.cost:
+        if self.entity.fighter.action > 0:
             return True
 
     @property
@@ -52,7 +53,7 @@ class TakeDownStairsAction(Action):
             self.engine.message_log.add_message(
                 "You descend the staircase.", color.descend
             )
-            self.entity.fighter.time = self.entity.fighter.max_time
+            self.entity.fighter.action = self.entity.fighter.max_actions
         elif (self.entity.x, self.entity.y) == self.engine.game_map.upstairs_location:
             raise exceptions.Impossible("Wrong stairs.")
         else:
@@ -76,8 +77,8 @@ class TakeUpStairsAction(Action):
 
 
 class ActionWithDirection(Action):
-    def __init__(self, entity: Actor, dx: int, dy: int, time_cost: int = 0):
-        super().__init__(entity, time_cost=time_cost)
+    def __init__(self, entity: Actor, dx: int, dy: int, uses_action: bool = True):
+        super().__init__(entity, uses_action=True)
         self.dx = dx
         self.dy = dy
 
@@ -101,8 +102,8 @@ class ActionWithDirection(Action):
 
 
 class ActionWithLocation(Action):
-    def __init__(self, entity: Actor, x: int, y: int, time_cost: int = 0):
-        super().__init__(entity, time_cost=time_cost)
+    def __init__(self, entity: Actor, x: int, y: int, uses_action: bool = True):
+        super().__init__(entity, uses_action = uses_action)
         self.x = x
         self.y = y
 
@@ -127,8 +128,8 @@ class ActionWithLocation(Action):
 
 class WaitAction(Action):
     def perform(self) -> None:
-        self.time_cost = self.entity.fighter.time
-        self.entity.fighter.time = 0
+        self.uses_action = True
+        self.entity.fighter.action = 0
         # if self.entity == self.engine.player:
         #     self.engine.message_log.add_message(
         #         f"{self.entity.name} waits, ending their turn.", color.white
@@ -137,7 +138,7 @@ class WaitAction(Action):
 
 class MovementAction(ActionWithDirection):
     def __init__(self, entity: Actor, dx: int, dy: int) -> None:
-        super().__init__(entity, dx, dy, time_cost=4)
+        super().__init__(entity, dx, dy, uses_action=True)
 
     def perform(self) -> None:
         dest_x, dest_y = self.dest_xy
@@ -147,18 +148,20 @@ class MovementAction(ActionWithDirection):
             raise exceptions.Impossible("That way is blocked.")
         if not self.engine.game_map.tiles["walkable"][dest_x, dest_y]:
             # Destination is blocked by a tile.
+            # self.engine.game_map.tiles[dest_x,dest_y] = tile_types.floor
+            # The above is permanent digging code?
             raise exceptions.Impossible("That way is blocked.")
         if self.engine.game_map.get_blocking_entity_at_location(dest_x, dest_y):
             # Destination is blocked by a tile.
             raise exceptions.Impossible("That way is blocked.")
 
         self.entity.move(self.dx, self.dy)
-        self.entity.fighter.time = self.entity.fighter.time - self.time_cost
+        self.entity.fighter.action -= 1
 
 
 class MeleeAction(ActionWithDirection):
     def __init__(self, entity: Actor, dx: int, dy: int) -> None:
-        super().__init__(entity, dx, dy, time_cost=5)
+        super().__init__(entity, dx, dy, uses_action=True)
 
     def perform(self) -> None:
         target = self.target_actor
@@ -183,18 +186,18 @@ class MeleeAction(ActionWithDirection):
                 f"{attack_desc} for {damage} hit points.", attack_color
             )
             target.fighter.create_damage_log(category="Attack", source_entity=self.entity,
-                                                  details=f"{attack_desc} for {damage} hit points.")
+                                             details=f"{attack_desc} for {damage} hit points.")
             target.fighter.hp -= damage
         else:
             self.engine.message_log.add_message(
                 f"{attack_desc} but does no damage.", attack_color
             )
-        self.entity.fighter.time = self.entity.fighter.time - self.time_cost
+        self.entity.fighter.action -= 1
 
 
 class MeleeWeaponAction(ActionWithDirection):
     def __init__(self, entity, dx, dy):
-        super().__init__(entity, dx, dy, time_cost=entity.equipment.weapon.equippable.time_cost)
+        super().__init__(entity, dx, dy, uses_action=entity.equipment.weapon.equippable.uses_action)
 
     def perform(self) -> None:
         target = self.target_actor
@@ -203,7 +206,7 @@ class MeleeWeaponAction(ActionWithDirection):
             raise exceptions.Impossible("Nothing to attack.")
         elif target == self.entity:
             raise exceptions.Impossible("Can't target yourself!")
-        damageCalculator = DamageCalculator(self.entity,"Melee",self.target_actor,self.entity.equipment.weapon)
+        damageCalculator = DamageCalculator(self.entity, "Melee", self.target_actor, self.entity.equipment.weapon)
         damage = damageCalculator.calculate_damage()
 
         attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
@@ -225,12 +228,12 @@ class MeleeWeaponAction(ActionWithDirection):
                 f"{attack_desc} but does no damage.", attack_color
             )
 
-        self.entity.fighter.time -= self.time_cost
+        self.entity.fighter.action -= 1
 
 
 class BumpAction(ActionWithDirection):
     def perform(self) -> None:
-        self.time_cost = 0
+        self.uses_action = False
         weapon_action = None
         if self.entity.equipment.weapon:
             if self.entity.equipment.weapon.equippable.type == "Melee" or self.entity.equipment.weapon.equippable.can_melee:
@@ -241,44 +244,40 @@ class BumpAction(ActionWithDirection):
             if self.target_actor == self.entity:
                 raise exceptions.Impossible("Can't target yourself!")
             if weapon_action:
-                if self.entity.fighter.time >= weapon_action.time_cost:
+                if self.entity.fighter.action>0:
                     return weapon_action.perform()
                 else:
-                    raise exceptions.Impossible("You do not have enough time.")
+                    raise exceptions.Impossible("You cannot act.")
             elif self.entity.equipment.weapon:
                 raise exceptions.Impossible("You don't have an appropriate weapon.")
             else:
-                if self.entity.fighter.time >= melee_action.time_cost:
+                if self.entity.fighter.action >0:
                     return melee_action.perform()
                 else:
-                    raise exceptions.Impossible("You do not have enough time.")
+                    raise exceptions.Impossible("You cannot act.")
 
         else:
-            if self.entity.fighter.time >= movement_action.time_cost:
+            if self.entity.fighter.action >0:
                 return movement_action.perform()
             else:
-                raise exceptions.Impossible("You do not have enough time.")
+                raise exceptions.Impossible("You cannot act.")
 
 
 class EquipAction(Action):
     def __init__(self, entity: Actor, item: Item):
-        super().__init__(entity, time_cost=0.5)
+        super().__init__(entity, uses_action=False)
 
         self.item = item
 
     def perform(self) -> None:
-        if self.entity.fighter.time >= self.cost:
-            self.entity.equipment.toggle_equip(self.item)
-            self.entity.fighter.time = self.entity.fighter.time - self.cost
-        else:
-            raise exceptions.Impossible("You don't have enough time.")
+        self.entity.equipment.toggle_equip(self.item)
 
 
 class ItemAction(Action):
     def __init__(
-            self, entity: Actor, item: Item, target_xy: Optional[Tuple[int, int]] = None
+        self, entity: Actor, item: Item, target_xy: Optional[Tuple[int, int]] = None
     ):
-        super().__init__(entity, time_cost=0)
+        super().__init__(entity, uses_action=False)
         self.item = item
         if not target_xy:
             target_xy = entity.x, entity.y
@@ -292,20 +291,20 @@ class ItemAction(Action):
     def perform(self) -> None:
         """Invoke the items ability, this action will be given to provide context."""
         if self.item.consumable:
-            if self.entity.fighter.time >= self.item.consumable.time_cost:
+            if self.entity.fighter.action > 0:
                 if self.item in self.entity.inventory.items:
                     self.item.consumable.activate(self)
                 else:
                     exceptions.Impossible(f"Item exhausted.")
             else:
-                raise exceptions.Impossible(f"Not enough time to proceed.")
+                raise exceptions.Impossible(f"You cannot act.")
 
 
 class PickupAction(Action):
     """Pickup an item and add it to the inventory, if there is room for it."""
 
     def __init__(self, entity: Actor):
-        super().__init__(entity, time_cost=0.5)
+        super().__init__(entity, uses_action=False)
 
     def perform(self) -> None:
         name = ""
@@ -316,51 +315,44 @@ class PickupAction(Action):
         actor_location_x = self.entity.x
         actor_location_y = self.entity.y
         inventory = self.entity.inventory
-        if self.entity.fighter.time >= self.cost:
-            for item in self.engine.game_map.items:
-                if actor_location_x == item.x and actor_location_y == item.y:
-                    if len(inventory.items) >= inventory.capacity:
-                        raise exceptions.Impossible("Your inventory is full.")
+        for item in self.engine.game_map.items:
+            if actor_location_x == item.x and actor_location_y == item.y:
+                if len(inventory.items) >= inventory.capacity:
+                    raise exceptions.Impossible("Your inventory is full.")
 
-                    self.engine.game_map.entities.remove(item)
-                    if item.ammo:
-                        exists_ammo = False
-                        for existing_item in inventory.items:
-                            if item.name == existing_item.name:
-                                existing_item.ammo.stacks += item.ammo.stacks
-                                exists_ammo = True
-                                break
-                        if exists_ammo:
-                            pass
-                        else:
-                            item.parent = self.entity.inventory
-                            inventory.items.append(item)
-                        if item.ammo.stacks > 1:
-                            self.engine.message_log.add_message(f"{name} picked up {item.ammo.stacks} {item.name}s!")
-                        else:
-                            self.engine.message_log.add_message(f"{name} picked up the {item.name}!")
-
+                self.engine.game_map.entities.remove(item)
+                if item.ammo:
+                    exists_ammo = False
+                    for existing_item in inventory.items:
+                        if item.name == existing_item.name:
+                            existing_item.ammo.stacks += item.ammo.stacks
+                            exists_ammo = True
+                            break
+                    if exists_ammo:
+                        pass
                     else:
                         item.parent = self.entity.inventory
                         inventory.items.append(item)
+                    if item.ammo.stacks > 1:
+                        self.engine.message_log.add_message(f"{name} picked up {item.ammo.stacks} {item.name}s!")
+                    else:
                         self.engine.message_log.add_message(f"{name} picked up the {item.name}!")
-                    self.entity.fighter.time = self.entity.fighter.time - self.cost
-                    return
-        else:
-            raise exceptions.Impossible("You do not have enough time.")
+
+                else:
+                    item.parent = self.entity.inventory
+                    inventory.items.append(item)
+                    self.engine.message_log.add_message(f"{name} picked up the {item.name}!")
+                return
 
         raise exceptions.Impossible("There is nothing here to pick up.")
 
 
 class DropItem(ItemAction):
     def perform(self) -> None:
-        self.time_cost = 0.1
-        if self.entity.fighter.time >= self.cost:
-            if self.entity.equipment.item_is_equipped(self.item):
+        if self.entity.equipment.item_is_equipped(self.item):
                 self.entity.equipment.toggle_equip(self.item)
-            self.entity.inventory.drop(self.item)
-        else:
-            raise exceptions.Impossible("You do not have enough time.")
+        self.entity.inventory.drop(self.item)
+
 
 
 class ExecuteAction(Action):
@@ -370,8 +362,8 @@ class ExecuteAction(Action):
         self.xy = xy
 
     def perform(self):
-        if self.entity.fighter.time < self.time_cost:
-            raise exceptions.Impossible("Not enough time to use this skill.")
+        if self.entity.fighter.action < 0:
+            raise exceptions.Impossible("You cannot act.")
         print(self.skill.remaining_cooldown)
         if self.skill.on_cooldown():
             raise exceptions.Impossible("Skill is on cooldown.")
@@ -382,7 +374,7 @@ class ExecuteAction(Action):
 
 class LoadAction(Action):
     def __init__(self, entity, item):
-        super().__init__(entity, time_cost=entity.equipment.weapon.equippable.reload_time)
+        super().__init__(entity, uses_action=False)
         self.item = item
 
     def perform(self):
@@ -413,9 +405,6 @@ class LoadAction(Action):
         else:
             raise exceptions.Impossible("You are wielding a non-ranged weapon (or not wielding a weapon).")
 
-        if self.entity.fighter.time < weapon.equippable.reload_time:
-            raise exceptions.Impossible("You don't have enough time.")
-
         # Get the number of ammo needed.
         self.entity.inventory.items.remove(self.item)
         if weapon.equippable.category == "Bow":
@@ -430,15 +419,10 @@ class LoadAction(Action):
                 fragment = ammo.fragment(required_ammo)
                 self.entity.inventory.items.append(fragment)
             weapon.equippable.current_ammo.append(self.item)
-            if weapon.equippable.category == "Crossbow":
-                self.entity.fighter.time -= weapon.equippable.reload_time
-            else:
-                self.entity.fighter.time = 0
-
 
 class RangedWeaponAction(ActionWithLocation):
     def __init__(self, entity, x, y):
-        super().__init__(entity, x, y, time_cost=0)
+        super().__init__(entity, x, y, uses_action=False)
 
     def perform(self) -> None:
         if not self.entity.has_direct_los(self.x, self.y):
@@ -460,9 +444,8 @@ class RangedWeaponAction(ActionWithLocation):
 
 class BowWeaponAction(ActionWithLocation):
     def perform(self) -> None:
-        self.time_cost = self.entity.equipment.weapon.equippable.time_cost
-        if self.entity.fighter.time < self.time_cost:
-            raise exceptions.Impossible("Not enough time.")
+        if self.entity.fighter.action < 1:
+            raise exceptions.Impossible("You cannot act.")
         if not self.entity.equipment.back:
             raise exceptions.Impossible("No quiver.")
         target = self.target_actor
@@ -483,7 +466,8 @@ class BowWeaponAction(ActionWithLocation):
         if ammo.stacks <= 0:
             self.entity.equipment.back.equippable.items.remove(item)
         print(ammo)
-        damageCalculator = DamageCalculator(self.entity, "Ranged", self.target_actor, self.entity.equipment.weapon,ammo=item)
+        damageCalculator = DamageCalculator(self.entity, "Ranged", self.target_actor, self.entity.equipment.weapon,
+                                            ammo=item)
         damage = damageCalculator.calculate_damage()
         print("Damage", damage)
 
@@ -505,14 +489,13 @@ class BowWeaponAction(ActionWithLocation):
                 f"{attack_desc} but does no damage.", attack_color
             )
 
-        self.entity.fighter.time -= self.time_cost
+        self.entity.fighter.action -= 1
 
 
 class CrossbowWeaponAction(ActionWithLocation):
     def perform(self) -> None:
-        self.time_cost = self.entity.equipment.weapon.equippable.time_cost
-        if self.entity.fighter.time < self.time_cost:
-            raise exceptions.Impossible("Not enough time.")
+        if self.entity.fighter.action<1:
+            raise exceptions.Impossible("You cannot act.")
         target = self.target_actor
         print(target)
         if not target:
@@ -555,15 +538,14 @@ class CrossbowWeaponAction(ActionWithLocation):
                 f"{attack_desc} but does no damage.", attack_color
             )
 
-        self.entity.fighter.time -= self.time_cost
+        self.entity.fighter.action -= 1
 
 
 class GunWeaponAction(ActionWithLocation):
     def perform(self) -> None:
-        self.time_cost = self.entity.equipment.weapon.equippable.shot_time
-        total_time_cost = 0
-        if self.entity.fighter.time < self.time_cost:
-            raise exceptions.Impossible("Not enough time.")
+        total_actions_used = 0
+        if self.entity.fighter.action < 1:
+            raise exceptions.Impossible("You cannot act.")
         target = self.target_actor
         print(target)
         if not target:
@@ -576,7 +558,7 @@ class GunWeaponAction(ActionWithLocation):
                 self.entity.equipment.weapon.equippable.current_ammo.remove(item)
         if not self.entity.equipment.weapon.equippable.current_ammo:
             raise exceptions.Impossible("No ammo.")
-        while total_time_cost < self.entity.fighter.time and weapon.equippable.num_of_ammo > 0 and self.target_actor.fighter.hp>0:
+        while total_actions_used < self.entity.fighter.action and weapon.equippable.num_of_ammo > 0 and self.target_actor.fighter.hp > 0:
             item = self.entity.equipment.weapon.equippable.current_ammo[0]
             ammo = item.ammo
             ammo.stacks -= 1
@@ -605,14 +587,14 @@ class GunWeaponAction(ActionWithLocation):
                 self.engine.message_log.add_message(
                     f"{attack_desc} but does no damage.", attack_color
                 )
-            total_time_cost += self.time_cost
+            total_actions_used += 1
 
-        self.entity.fighter.time -= total_time_cost
+        self.entity.fighter.action-= total_actions_used
 
 
 class MagicWeaponAction(ActionWithLocation):
     def __init__(self, entity, x, y):
-        super().__init__(entity, x, y, time_cost=0)
+        super().__init__(entity, x, y, uses_action=False)
 
     def perform(self) -> None:
         if not self.entity.has_direct_los(self.x, self.y):
@@ -623,12 +605,12 @@ class MagicWeaponAction(ActionWithLocation):
                 xy = self.x, self.y
                 weapon.equippable.activate(xy)
             else:
-                self.time_cost = weapon.equippable.time_cost
+                self.uses_action = weapon.equippable.uses_action
                 mp_cost = weapon.equippable.mp_cost
-                if self.entity.fighter.time < self.time_cost:
-                    raise exceptions.Impossible("Not enough time.")
+                if self.entity.fighter.action<1:
+                    raise exceptions.Impossible("You cannot act.")
                 if self.entity.fighter.mp < mp_cost:
-                    raise exceptions.Impossible("Not enough time.")
+                    raise exceptions.Impossible("You cannot act.")
                 target = self.target_actor
                 print(target)
                 if not target:
@@ -636,7 +618,7 @@ class MagicWeaponAction(ActionWithLocation):
                 elif target == self.entity:
                     raise exceptions.Impossible("You can't target yourself.")
                 damageCalculator = DamageCalculator(self.entity, "Magic", self.target_actor,
-                                                    self.entity.equipment.weapon,)
+                                                    self.entity.equipment.weapon, )
                 damage = damageCalculator.calculate_damage()
 
                 attack_desc = f"{self.entity.name.capitalize()} fires magic energy at {target.name}"
@@ -657,7 +639,7 @@ class MagicWeaponAction(ActionWithLocation):
                         f"{attack_desc} but does no damage.", attack_color
                     )
                 self.entity.fighter.mp -= mp_cost
-                self.entity.fighter.time -= self.time_cost
+                self.entity.fighter.action -= 1
 
         else:
             raise exceptions.Impossible("You are wielding a non-magic weapon(or not wielding a weapon).")

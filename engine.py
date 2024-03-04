@@ -33,6 +33,7 @@ class Engine:
     def handle_enemy_turns(self) -> None:
         for entity in set(self.game_map.actors) - {self.player}:
             if entity.ai:
+                print(entity.x,entity.y)
                 try:
                     if entity.fighter.time > 0:
                         while entity.fighter.time > 0:
@@ -101,8 +102,8 @@ class Engine:
                                           render_text="Time",
                                           fill_color=color.dark_blue,
                                           empty_color=color.black,
-                                          current_value=self.player.fighter.time,
-                                          maximum_value=self.player.fighter.max_time,
+                                          current_value=self.player.fighter.action,
+                                          maximum_value=self.player.fighter.max_actions,
                                           total_width=12)
 
         render_functions.render_dungeon_level(

@@ -38,18 +38,18 @@ class Fighter(BaseComponent):
         self.magical_defense = 0  # Set to 0 initially
         self.critical_chance: float
         self.critical_damage: float
-        self.max_time: float = 6
-        self._time = self.max_time
+        self.max_actions: int = 1
+        self._actions = self.max_actions
         self.damage_log: List[DamageLogEntry] = []
 
     @property
-    def time(self) -> float:
-        return self._time
+    def action(self) -> int:
+        return self._actions
 
-    @time.setter
-    def time(self, value: float) -> None:
+    @action.setter
+    def action(self, value: int) -> None:
         # Set the time attribute to the new value
-        self._time = value
+        self._actions = value
 
         # # Check if the time pool is empty (no time remaining)
         # if self._time <= 0:
