@@ -78,9 +78,8 @@ class Accessory(Equippable):
 
 
 class MeleeWeapon(Weapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int]):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
-        self.time_cost = time_cost
         self.type = "Melee"
         self.category = None
         self.can_melee = True
@@ -91,12 +90,9 @@ class MeleeWeapon(Weapon):
 
 
 class RangedWeapon(Weapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float | int, max_ammo: int,
-                 reload_time: float | int, max_distance: int, ):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, max_distance: int, ):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
-        self.time_cost = time_cost
         self.max_ammo = max_ammo
-        self.reload_time = reload_time
         self.current_ammo: List[Item] = []
         self.type = "Ranged"
         self.category = None
@@ -124,7 +120,7 @@ class RangedWeapon(Weapon):
 
 class Bow(RangedWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], max_distance: int, ):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, max_ammo=1, reload_time=0,
+        super().__init__(rarity=rarity, damage_dice=damage_dice, max_ammo=1,
                          max_distance=max_distance)
         self.category = "Bow"
 
@@ -134,11 +130,8 @@ class Bow(RangedWeapon):
 
 
 class Gun(RangedWeapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, reload_time: float | int,
-                 shot_time: float | int, max_distance: int, ):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=0, max_ammo=max_ammo,
-                         reload_time=reload_time, max_distance=max_distance)
-        self.shot_time = shot_time
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], max_ammo: int, max_distance: int, ):
+        super().__init__(rarity=rarity, damage_dice=damage_dice, max_ammo=max_ammo, max_distance=max_distance)
         self.category = "Gun"
 
     def update_combat_rating(self) -> None:
@@ -148,8 +141,7 @@ class Gun(RangedWeapon):
 
 class Crossbow(RangedWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], max_distance: int, ):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=2, max_ammo=1, reload_time=3,
-                         max_distance=max_distance)
+        super().__init__(rarity=rarity, damage_dice=damage_dice, max_ammo=1,max_distance=max_distance)
         self.category = "Crossbow"
 
     def update_combat_rating(self) -> None:
@@ -158,9 +150,8 @@ class Crossbow(RangedWeapon):
 
 
 class MagicWeapon(Weapon):
-    def __init__(self, rarity: str, damage_dice: tuple[int, int], time_cost: float, mp_cost: int):
+    def __init__(self, rarity: str, damage_dice: tuple[int, int], mp_cost: int):
         super().__init__(rarity=rarity, damage_dice=damage_dice)
-        self.time_cost = time_cost
         self.type = "Magic"
         self.mp_cost = mp_cost
         self.category = None
@@ -168,7 +159,7 @@ class MagicWeapon(Weapon):
 
 class Staff(MagicWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], mp_cost: int):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=5, mp_cost=mp_cost)
+        super().__init__(rarity=rarity, damage_dice=damage_dice, mp_cost=mp_cost)
         self.can_melee = True
         self.category = "Staff"
 
@@ -179,7 +170,7 @@ class Staff(MagicWeapon):
 
 class Orb(MagicWeapon):
     def __init__(self, rarity: str, damage_dice: tuple[int, int], mp_cost: int):
-        super().__init__(rarity=rarity, damage_dice=damage_dice, time_cost=4, mp_cost=mp_cost)
+        super().__init__(rarity=rarity, damage_dice=damage_dice, mp_cost=mp_cost)
         self.category = "Orb"
 
     def update_combat_rating(self) -> None:
@@ -189,7 +180,7 @@ class Orb(MagicWeapon):
 
 class Wand(MagicWeapon):
     def __init__(self, rarity: str, Skills: List[ActiveSkill] | ActiveSkill = None):
-        super().__init__(rarity=rarity, damage_dice=(0, 0), time_cost=0, mp_cost=0)
+        super().__init__(rarity=rarity, damage_dice=(0, 0), mp_cost=0)
         self.category = "Wand"
         self.skills: Dict[str, ActiveSkill] = {}
         self.active_skill: Optional[ActiveSkill] = None

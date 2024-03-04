@@ -7,10 +7,13 @@ import numpy as np  # type: ignore
 import tcod
 from tcod.map import compute_fov
 
+from equipment_types import EquipmentType
+
 if TYPE_CHECKING:
     from entity import Actor, Entity
 
-from actions import Action, MeleeAction, MovementAction, WaitAction, BumpAction
+from actions import Action, MeleeAction, MovementAction, WaitAction, BumpAction, PickupAction, EquipAction, \
+    MeleeWeaponAction, LoadAction, RangedWeaponAction, MagicWeaponAction
 
 
 class BaseAI(Action):
@@ -42,6 +45,15 @@ class BaseAI(Action):
                 visible_actors.append(actor)
         return visible_actors
 
+    def item_search(self) -> List[Item]:
+        visible_map = compute_fov(self.entity.gamemap.tiles["transparent"], (self.entity.x, self.entity.y),
+                                  radius=self.entity.fighter.sight_range, )
+        visible_items = []
+        for item in self.entity.gamemap.items:
+            if visible_map[item.x, item.y]:
+                visible_items.append(item)
+        return visible_items
+
     def detect_player(self) -> Actor or None:
         for actor in self.actors_search():
             if actor == self.entity.gamemap.engine.player:
@@ -69,7 +81,7 @@ class BaseAI(Action):
             dx = dest_x - self.entity.x
             dy = dest_y - self.entity.y
             movement_action = MovementAction(self.entity, dx, dy)
-            if self.entity.fighter.time >= movement_action.time_cost and not self.entity.gamemap.get_actor_at_location(
+            if self.entity.fighter.actions >= 1 and not self.entity.gamemap.get_actor_at_location(
                     dest_x, dest_y):
                 return movement_action.perform()
             else:
@@ -143,7 +155,7 @@ class HostileEnemy(BaseAI):
                 # If close to target
                 if distance <= 1:
                     melee_action = MeleeAction(self.entity, dx, dy)
-                    if self.entity.fighter.time >= melee_action.time_cost:
+                    if self.entity.fighter.actions >= 1:
                         return melee_action.perform()
                     else:
                         return WaitAction(self.entity).perform()
@@ -360,3 +372,332 @@ class ConfusedEnemy(BaseAI):
             # The actor will either try to move or attack in the chosen random direction.
             # Its possible the actor will just bump into the wall, wasting a turn.
             return BumpAction(self.entity, direction_x, direction_y, ).perform()
+
+
+class HostileItemUser(HostileEnemy):
+    def __init__(self, entity: Actor):
+        super().__init__(entity)
+
+    def switch_to_melee(self):
+        weapon = self.entity.equipment.weapon
+        inventory = self.entity.inventory
+        for item in inventory.items:
+            if item.equippable:
+                if item.equippable.equipment_type == EquipmentType.WEAPON:
+                    if item.equippable.type == "Melee":
+                        equip_action = EquipAction(self.entity, item)
+                        return equip_action.perform()
+
+
+    def perform(self) -> None:
+        weapon = self.entity.equipment.weapon
+        # If the enemy has a target, check if it is visible.
+        if self.entity.gamemap.get_item_at_location(self.entity.x,self.entity.y) and not self.entity.inventory.is_full:
+            item = self.entity.gamemap.get_item_at_location(self.entity.x,self.entity.y)
+            if item.equippable:
+                if item.equippable.equipment_type == EquipmentType.WEAPON:
+                    if item.equippable.type in ["Melee","Ranged","Magic"]:
+                        pick_up_action = PickupAction(self.entity)
+                        print("Picking up a weapon")
+                        return pick_up_action.perform()
+                elif item.equippable.equipment_type == EquipmentType.Container:
+                    pick_up_action = PickupAction(self.entity)
+                    print("Picking up a quiver")
+                    return pick_up_action.perform()
+            elif item.ammo:
+                if weapon:
+                    if weapon.equippable.type == "Ranged":
+                        if weapon.equippable.category=="Bow":
+                            if item.ammo.category == "Arrow":
+                                pick_up_action = PickupAction(self.entity)
+                                print("Picking up arrows")
+                                return pick_up_action.perform()
+                        if weapon.equippable.category=="Crossbow":
+                            if item.ammo.category == "Bolt":
+                                print("Picking up bolt")
+                                pick_up_action = PickupAction(self.entity)
+                                return pick_up_action.perform()
+                        if weapon.equippable.category=="Gun":
+                            if item.ammo.category == "Bullet":
+                                print("Picking up bullet")
+                                pick_up_action = PickupAction(self.entity)
+                                return pick_up_action.perform()
+
+        if not weapon and self.entity.inventory:
+            for item in self.entity.inventory.items:
+                if item.equippable and item.equippable.equipment_type==EquipmentType.WEAPON:
+                    if item.equippable.type == "Melee":
+                        print("Trying to equip a melee wep")
+                        equip_action = EquipAction(self.entity,item)
+                        return equip_action.perform()
+
+                    elif item.equippable.type == "Ranged":
+                        print("Trying to equip a ranged weapon")
+                        equip_action = EquipAction(self.entity, item)
+                        return equip_action.perform()
+
+                    elif item.equippable.type == "Magic":
+                        print("Trying to equip a magic weapon")
+                        equip_action = EquipAction(self.entity, item)
+                        return equip_action.perform()
+
+        # If you don't have a quiver, try to equip one
+        if weapon and not self.entity.equipment.back:
+            for item in self.entity.inventory.items:
+                if item.equippable and item.equippable.equipment_type==EquipmentType.Container:
+                    print("Tryna load a quiver")
+                    equip_action = EquipAction(self.entity, item)
+                    return equip_action.perform()
+        # You have a ranged weapon? Great! Check if its loaded.
+        if weapon and weapon.equippable.type == "Ranged" :
+            if weapon.equippable.category == "Bow" and self.entity.equipment.back:
+                if not self.entity.equipment.back.equippable.ammo_full:
+                    if not self.entity.equipment.back.equippable.items:
+                        for item in self.entity.inventory.items:
+                            if item.ammo:
+                                if item.ammo.category=="Arrow":
+                                    load_action = LoadAction(self.entity, item)
+                                    print("Hi...")
+                                    return load_action.perform()
+            elif weapon.equippable.category == "Crossbow":
+                if not weapon.equippable.current_ammo:
+                    for item in self.entity.inventory.items:
+                        if item.ammo:
+                            if item.ammo.category == "Bolt":
+                                load_action = LoadAction(self.entity, item)
+                                print("Hi there!")
+                                return load_action.perform()
+            elif weapon.equippable.category == "Gun":
+                if not weapon.equippable.current_ammo:
+                    for item in self.entity.inventory.items:
+                        if item.ammo:
+                            if item.ammo.category == "Bullet":
+                                load_action = LoadAction(self.entity, item)
+                                print("Hi")
+                                return load_action.perform()
+
+
+
+
+        if self.has_target():
+            if self.target_is_visible():
+                # Now that we've established that the enemy has a target, we now have something to consider
+                # What type of weapon does the enemy have, if it has any at all?
+                if not weapon:
+                    dx = self.target.x - self.entity.x
+                    dy = self.target.y - self.entity.y
+                    distance = max(abs(dx), abs(dy))
+                    # If close to target
+                    if distance <= 1:
+                        melee_action = MeleeAction(self.entity, dx, dy)
+                        if self.entity.fighter.actions >= 1:
+                            return melee_action.perform()
+                        else:
+                            return WaitAction(self.entity).perform()
+                    # If not close but enemy has a path and the target is visible, move along the path.
+                    self.approach_map.set_goal_points([self.target])
+                    self.set_path(self.approach_map.get_path_to())
+                    if self.path:
+                        return self.move_along_path()
+                    else:
+                        return WaitAction(self.entity).perform()
+                else:
+                    # We do in fact have a weapon. Let's check if its a melee weapon.
+                    if weapon.equippable.type == "Melee":
+                        # We have a melee weapon. This is essentially the same as the default behaaviour so we copy and paste.
+                        dx = self.target.x - self.entity.x
+                        dy = self.target.y - self.entity.y
+                        distance = max(abs(dx), abs(dy))
+                        # If close to target
+                        if distance <= 1:
+                            melee_action = MeleeWeaponAction(self.entity, dx, dy)
+                            if self.entity.fighter.actions >= 1:
+                                return melee_action.perform()
+                            else:
+                                return WaitAction(self.entity).perform()
+                        # If not close but enemy has a path and the target is visible, move along the path.
+                        self.approach_map.set_goal_points([self.target])
+                        self.set_path(self.approach_map.get_path_to())
+                        if self.path:
+                            return self.move_along_path()
+                        else:
+                            return WaitAction(self.entity).perform()
+                    elif weapon.equippable.type == "Ranged":
+                        dx = self.target.x - self.entity.x
+                        dy = self.target.y - self.entity.y
+                        distance = max(abs(dx), abs(dy))
+                        if distance<=weapon.equippable.range:
+                            # Target is in range, stay in place.
+                            if weapon.equippable.category == "Bow":
+                                # Two cases, no quiver, or quiver but no ammo
+                                if not self.entity.equipment.back:
+                                    self.switch_to_melee()
+                                    print("Don't have a quiver :(")
+                                    item_check = self.item_search()
+                                    for item in item_check:
+                                        if item.equippable:
+                                            if item.equippable.equipment_type == EquipmentType.Container:
+                                                self.set_target(item)
+                                                self.approach_map.set_goal_points([self.target])
+                                                self.set_path(self.approach_map.get_path_to())
+                                                return self.move_along_path()
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+                                elif self.entity.equipment.back and not self.entity.equipment.back.equippable.items:
+                                    self.switch_to_melee()
+                                    print("Rip my arrows")
+                                    item_check = self.item_search()
+                                    for item in item_check:
+                                        if item.ammo:
+                                            if item.ammo.category == "Arrow":
+                                                self.set_target(item)
+                                                self.approach_map.set_goal_points([self.target])
+                                                self.set_path(self.approach_map.get_path_to())
+                                                return self.move_along_path()
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+
+                            else:
+                                if not weapon.equippable.current_ammo:
+                                    self.switch_to_melee()
+                                    print("Where's the damn ammo?")
+                                    item_check = self.item_search()
+                                    for item in item_check:
+                                        if item.ammo:
+                                            if weapon.equippable.category == "Crossbow":
+                                                if item.ammo.category == "Bolt":
+                                                    self.set_target(item)
+                                                    self.approach_map.set_goal_points([self.target])
+                                                    self.set_path(self.approach_map.get_path_to())
+                                                    return self.move_along_path()
+                                            elif weapon.equippable.category == "Gun":
+                                                if item.ammo.category == "Bullet":
+                                                    self.set_target(item)
+                                                    self.approach_map.set_goal_points([self.target])
+                                                    self.set_path(self.approach_map.get_path_to())
+                                                    return self.move_along_path()
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+
+
+                            ranged_action = RangedWeaponAction(self.entity, self.target.x,self.target.y)
+                            if self.entity.fighter.actions >= 1:
+                                return ranged_action.perform()
+                            else:
+                                return WaitAction(self.entity).perform()
+                        # If not close but enemy has a path and the target is visible, move along the path.
+                        self.approach_map.set_goal_points([self.target])
+                        self.set_path(self.approach_map.get_path_to())
+                        if self.path:
+                            return self.move_along_path()
+                        else:
+                            return WaitAction(self.entity).perform()
+                    elif weapon.equippable.type == "Magic":
+                        print("I have magic")
+                        dx = self.target.x - self.entity.x
+                        dy = self.target.y - self.entity.y
+                        distance = max(abs(dx), abs(dy))
+                        mp_cost = weapon.equippable.mp_cost
+                        print("My MP", self.entity.fighter.mp)
+                        if weapon.equippable.category=="Staff":
+                            if distance <= 1:
+                                print("I want to melee for whatever reason")
+                                if weapon.equippable.can_melee:
+                                    melee_action = MeleeWeaponAction(self.entity, dx, dy)
+                                    if self.entity.fighter.actions >= 1:
+                                        return melee_action.perform()
+                                    else:
+                                        return WaitAction(self.entity).perform()
+                            else:
+                                print("Using magic with staff")
+                                magic_action = MagicWeaponAction(self.entity,self.target.x,self.target.y)
+                                if self.entity.fighter.mp >= mp_cost and self.entity.fighter.actions >= 1:
+                                    print("I was able to use da magic with ma staff")
+                                    return magic_action.perform()
+                                elif self.entity.fighter.mp<mp_cost:
+                                    print("No MP for staff :(")
+                                    print("Dagger time ig")
+                                    self.switch_to_melee()
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+                                else:
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+
+                        elif weapon.equippable.category == "Orb":
+                            if distance <= 1:
+                                print("Yeah no, I ain't dealin with this")
+                                self.switch_to_melee()
+                                self.set_path(self.get_path_to_nearest_room())
+                                return self.move_along_path()
+                            else:
+                                print("What some of me magic?")
+                                magic_action = MagicWeaponAction(self.entity,self.target.x,self.target.y)
+                                if self.entity.fighter.mp >= mp_cost and self.entity.fighter.actions >= 1:
+                                    print("Heck yeah take that")
+                                    return magic_action.perform()
+                                elif self.entity.fighter.mp<mp_cost:
+                                    print("Shit I'm switching")
+                                    self.switch_to_melee()
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+                                else:
+                                    self.set_path(self.get_path_to_nearest_room())
+                                    return self.move_along_path()
+
+
+
+
+
+
+            else:
+                if self.has_path():
+                    return self.move_along_path()
+                else:
+                    self.forget_target()
+                    # If the enemy doesn't have a path, it will wait or move to the nearest room.
+                    if random.random() < 0.5:
+                        return WaitAction(self.entity).perform()
+                    else:
+                        self.set_path(self.get_path_to_nearest_room())
+                        return self.move_along_path()
+        # If the enemy doesn't have a target, look for the player.
+        self.set_target(self.detect_player())
+
+        if self.has_target():
+            self.approach_map.set_goal_points([self.target])
+            self.set_path(self.approach_map.get_path_to())
+            return self.move_along_path()
+        else:
+            # If the enemy couldn't find a target (player) or a path to it, it will wait or move to the nearest room.
+            # However, first let's see if there are any items. If there are, let's move towards them.
+            # For now we only want to know if these items are equippable, and if they are melee weapons.
+            if not self.entity.inventory.is_full:
+                weapon_list = ["Melee","Ranged","Magic"]
+                for item in self.entity.inventory.items:
+                    if item.equippable:
+                        if item.equippable.equipment_type==EquipmentType.WEAPON:
+                            if item.equippable.type == "Melee":
+                                if "Melee" in weapon_list:
+                                    weapon_list.remove("Melee")
+                            elif item.equippable.type == "Ranged":
+                                if "Ranged" in weapon_list:
+                                    weapon_list.remove("Ranged")
+                            elif item.equippable.type == "Magic":
+                                if "Magic" in weapon_list:
+                                    weapon_list.remove("Magic")
+                item_check = self.item_search()
+                for item in item_check:
+                    if item.equippable:
+                        if item.equippable.equipment_type == EquipmentType.WEAPON:
+                            if item.equippable.type in weapon_list:
+                                self.set_target(item)
+                                self.approach_map.set_goal_points([self.target])
+                                self.set_path(self.approach_map.get_path_to())
+                                return self.move_along_path()
+            if random.random() < 0.5:
+                return WaitAction(self.entity).perform()
+            else:
+                if not self.path:
+                    self.set_path(self.get_path_to_nearest_room())
+                return self.move_along_path()

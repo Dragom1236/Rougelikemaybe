@@ -1,5 +1,6 @@
 # Define some damage values for the skills
 from components.SkillComponent import ActiveSkill, CombatSingleTarget, CombatAoe
+from effect_factories import curse_effect
 
 # melee_damage = 20
 # ranged_damage = 15
@@ -207,23 +208,28 @@ from components.SkillComponent import ActiveSkill, CombatSingleTarget, CombatAoe
 #     ]
 # )
 
-fireball_child = CombatAoe(damage=5, radius=3, is_child=True,is_ranged=True)
-fireball_aoe = CombatAoe(units=[fireball_child, fireball_child], damage=25, radius=3, is_ranged=True,
-                         is_child=False)
+fireball_aoe = CombatAoe(effects=[], damage=25, radius=3, is_ranged=True, )
+cursed_fireball_aoe = CombatAoe(effects=[curse_effect], damage=5, radius=5, is_ranged=True)
 Fireball = ActiveSkill(name="Fireball",
                        description="A ball of fire",
                        activation_requirements=[],
                        mp_cost=5,
                        cooldown=2,
-                       time_cost=2,
                        unit=fireball_aoe
                        )
+Cursed_Fireball = ActiveSkill(name="Cursed Fireball",
+                              description="A ball of cursed flames",
+                              activation_requirements=[],
+                              mp_cost=5,
+                              cooldown=1,
+                              unit=cursed_fireball_aoe
+                              )
 
-Arrow = CombatSingleTarget(is_ranged=True, damage=10)
+Arrow = CombatSingleTarget(effects=[], is_ranged=True, damage=10)
 PowerShot = ActiveSkill(name="Power Shot",
                         description="A powerful shot from a bow.",
                         activation_requirements=[],
                         sp_cost=5,
                         cooldown=1,
-                        time_cost=3,
+
                         unit=Arrow)

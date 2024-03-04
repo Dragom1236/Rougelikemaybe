@@ -38,18 +38,18 @@ class Fighter(BaseComponent):
         self.magical_defense = 0  # Set to 0 initially
         self.critical_chance: float
         self.critical_damage: float
-        self.max_time: float = 6
-        self._time = self.max_time
+        self.max_actions: int = 1
+        self._actions: int = self.max_actions
         self.damage_log: List[DamageLogEntry] = []
 
     @property
-    def time(self) -> float:
-        return self._time
+    def actions(self) -> int:
+        return self._actions
 
-    @time.setter
-    def time(self, value: float) -> None:
+    @actions.setter
+    def actions(self, value: int) -> None:
         # Set the time attribute to the new value
-        self._time = value
+        self._actions = value
 
         # # Check if the time pool is empty (no time remaining)
         # if self._time <= 0:
@@ -99,6 +99,8 @@ class Fighter(BaseComponent):
         self.parent.ai = None
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = RenderOrder.CORPSE
+        for item in self.parent.inventory.items:
+            self.parent.inventory.drop(item)
         most_recent_damage_entry = self.damage_log[-1]
         attacker = most_recent_damage_entry.source_entity
         if attacker.is_alive:

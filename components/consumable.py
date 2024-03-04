@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
 
 class Consumable(BaseComponent):
-    def __init__(self, time_cost: float | int = 0, effect: StatusEffect = None):
-        self.time_cost = time_cost
+    def __init__(self, effect: StatusEffect = None):
         self.effect = effect
 
     parent: Item
@@ -45,14 +44,14 @@ class Consumable(BaseComponent):
 
 
 class HealingConsumable(Consumable):
-    def __init__(self, amount: int, time_cost=1, effect: StatusEffect = None):
-        super().__init__(time_cost, effect)
+    def __init__(self, amount: int, effect: StatusEffect = None):
+        super().__init__(effect)
         self.amount = amount
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
-        if consumer.fighter.time < self.time_cost:
-            raise Impossible(f"You don't have enough time.")
+        if consumer.fighter.actions < 1:
+            raise Impossible(f"You can't act.")
 
         amount_recovered = consumer.fighter.heal(self.amount)
         if self.effect:
@@ -64,21 +63,21 @@ class HealingConsumable(Consumable):
                 color.health_recovered,
             )
             self.consume()
-            consumer.fighter.time = consumer.fighter.time - self.time_cost
+            consumer.fighter.actions = consumer.fighter.actions - 1
         else:
             raise Impossible(f"Your health is already full.")
 
 
 class LightningDamageConsumable(Consumable):
     def __init__(self, damage: int, maximum_range: int):
-        super().__init__(time_cost=3)
+        super().__init__()
         self.damage = damage
         self.maximum_range = maximum_range
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
-        if consumer.fighter.time < self.time_cost:
-            raise Impossible(f"You don't have enough time.")
+        if consumer.fighter.actions < 1:
+            raise Impossible(f"You can't act.")
         target = None
         closest_distance = self.maximum_range + 1.0
 
@@ -95,7 +94,7 @@ class LightningDamageConsumable(Consumable):
                 f"A lighting bolt strikes the {target.name} with a loud thunder, for {self.damage} damage!"
             )
             target.fighter.take_damage(self.damage)
-            consumer.fighter.time = consumer.fighter.time - self.time_cost
+            consumer.fighter.actions = consumer.fighter.actions - 1
             self.consume()
         else:
             raise Impossible("No enemy is close enough to strike.")
@@ -103,7 +102,7 @@ class LightningDamageConsumable(Consumable):
 
 class ConfusionConsumable(Consumable):
     def __init__(self, number_of_turns: int):
-        super().__init__(time_cost=1.5)
+        super().__init__()
         self.number_of_turns = number_of_turns
 
     def get_action(self, consumer: Actor) -> SingleRangedAttackHandler:
@@ -117,8 +116,8 @@ class ConfusionConsumable(Consumable):
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
-        if consumer.fighter.time < self.time_cost:
-            raise Impossible(f"You don't have enough time.")
+        if consumer.fighter.actions < 1:
+            raise Impossible(f"You can't act.")
         target = action.target_actor
         if not self.engine.game_map.visible[action.target_xy]:
             raise Impossible("You cannot target an area that you cannot see.")
@@ -134,13 +133,13 @@ class ConfusionConsumable(Consumable):
         target.ai = components.ai.ConfusedEnemy(
             entity=target, previous_ai=target.ai, turns_remaining=self.number_of_turns,
         )
-        consumer.fighter.time = consumer.fighter.time - self.time_cost
+        consumer.fighter.actions = consumer.fighter.actions - 1
         self.consume()
 
 
 class FireballDamageConsumable(Consumable):
     def __init__(self, damage: int, radius: int):
-        super().__init__(time_cost=5)
+        super().__init__()
         self.damage = damage
         self.radius = radius
 
@@ -156,8 +155,8 @@ class FireballDamageConsumable(Consumable):
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
-        if consumer.fighter.time < self.time_cost:
-            raise Impossible(f"You don't have enough time.")
+        if consumer.fighter.actions < 1:
+            raise Impossible(f"You can't act.")
         target_xy = action.target_xy
 
         if not self.engine.game_map.visible[target_xy]:
@@ -174,5 +173,5 @@ class FireballDamageConsumable(Consumable):
 
         if not targets_hit:
             raise Impossible("There are no targets in the radius.")
-        consumer.fighter.time = consumer.fighter.time - self.time_cost
+        consumer.fighter.actions = consumer.fighter.actions - 1
         self.consume()

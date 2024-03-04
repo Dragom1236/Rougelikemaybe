@@ -117,14 +117,14 @@ class EventHandler(BaseEventHandler):
             return False
 
         try:
-            if self.engine.player.fighter.time >= action.time_cost:  # Check if player has enough time to perform the action.
+            if self.engine.player.fighter.actions >= 1:  # Check if player has enough time to perform the action.
                 action.perform()
                 self.engine.update_fov()
         except exceptions.Impossible as exc:
             self.engine.message_log.add_message(exc.args[0], color.impossible)
             return False  # Skip enemy turn on exceptions.
 
-        if self.engine.player.fighter.time <= 0:
+        if self.engine.player.fighter.actions <= 0:
             # self.engine.player.status_effect_manager.add_effect(regeneration_effect)
             self.engine.player.status_effect_manager.update_effects()
             self.engine.player.abilities.update_cooldowns()
@@ -135,7 +135,7 @@ class EventHandler(BaseEventHandler):
                     if weapon.equippable.type == "Magic":
                         if weapon.equippable.category == "Wand":
                             weapon.equippable.update_cooldowns()
-            self.engine.player.fighter.time = self.engine.player.fighter.max_time
+            self.engine.player.fighter.actions = self.engine.player.fighter.max_actions
             self.engine.handle_enemy_turns()
             self.engine.update_fov()  # Update the FOV before the players next action.
             return True
@@ -399,8 +399,9 @@ class InventoryEventHandler(AskUserEventHandler):
                         item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity} (E)"
                     else:
                         item_string = f"{item_string} (E)"
-                elif item.equippable.equipment_type == EquipmentType.Container:
-                    item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
+                elif item.equippable:
+                    if item.equippable.equipment_type == EquipmentType.Container:
+                        item_string = f"({item_key}) {item.name} {item.equippable.num_of_ammo}/ {item.equippable.capacity}"
                 else:
                     item_string = f"({item_key}) {item.name}"
 

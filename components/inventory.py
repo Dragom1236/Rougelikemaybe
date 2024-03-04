@@ -25,6 +25,13 @@ class Inventory(BaseComponent):
         self.engine.message_log.add_message(f"You dropped the {item.name}.")
 
     @property
+    def is_full(self):
+        if len(self.items) == self.capacity:
+            return True
+        else:
+            return False
+
+    @property
     def ammo(self):
         ammo = []
         for item in self.items:

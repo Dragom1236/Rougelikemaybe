@@ -80,6 +80,13 @@ class GameMap:
 
         return None
 
+    def get_item_at_location(self, x: int, y: int) -> Optional[Item]:
+        for item in self.items:
+            if item.x == x and item.y == y:
+                return item
+
+        return None
+
     def render(self, console: Console) -> None:
         """
                 Renders the map.
@@ -98,12 +105,12 @@ class GameMap:
         )
         for entity in entities_sorted_for_rendering:
             # Only print entities that are in the FOV
-            if self.visible[entity.x, entity.y]:
-                console.print(
-                    x=entity.x, y=entity.y, string=entity.char, fg=entity.color
-                )
+            # if self.visible[entity.x, entity.y]:
+            #     console.print(
+            #         x=entity.x, y=entity.y, string=entity.char, fg=entity.color
+            #     )
             # For observing actor behaviour
-            # console.print(entity.x, entity.y, entity.char, fg=entity.color)
+            console.print(entity.x, entity.y, entity.char, fg=entity.color)
 
 
 class GameWorld:

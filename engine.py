@@ -33,8 +33,8 @@ class Engine:
         for entity in set(self.game_map.actors) - {self.player}:
             if entity.ai:
                 try:
-                    if entity.fighter.time > 0:
-                        while entity.fighter.time > 0:
+                    if entity.fighter.actions > 0:
+                        while entity.fighter.actions > 0:
                             entity.ai.perform()
                             if entity.level.requires_level_up:
                                 level_up_options = entity.level.level_up_options
@@ -46,7 +46,7 @@ class Engine:
                 entity.status_effect_manager.update_effects()
                 entity.conditions_manager.reduce_conditions_duration()
                 entity.abilities.update_cooldowns()
-                entity.fighter.time = entity.fighter.max_time
+                entity.fighter.actions = entity.fighter.max_actions
 
     def update_fov(self) -> None:
         """Recompute the visible area based on the players point of view."""
@@ -99,8 +99,8 @@ class Engine:
                                           render_text="Time",
                                           fill_color=color.dark_blue,
                                           empty_color=color.black,
-                                          current_value=self.player.fighter.time,
-                                          maximum_value=self.player.fighter.max_time,
+                                          current_value=self.player.fighter.actions,
+                                          maximum_value=self.player.fighter.max_actions,
                                           total_width=12)
 
         render_functions.render_dungeon_level(

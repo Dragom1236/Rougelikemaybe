@@ -2,7 +2,7 @@ import components
 from components import consumable, equippable_factories
 from components.SkillComponent import Abilities
 from components.Status import StatusEffectManager
-from components.ai import HostileEnemy, FleeingAI
+from components.ai import HostileEnemy, FleeingAI, HostileItemUser
 import race_factories
 from components.conditions import ConditionManager
 from components.equipment import Equipment
@@ -33,11 +33,11 @@ orc = Actor(
     char="o",
     color=(63, 127, 63),
     name="Orc",
-    ai_cls=HostileEnemy,
+    ai_cls=HostileItemUser,
     race=race_factories.orc_race,
     fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
-    inventory=Inventory(capacity=1),
+    inventory=Inventory(capacity=7),
     level=Level(level_up_base=150, xp_given=50),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
@@ -48,11 +48,11 @@ kobold = Actor(
     char="k",
     color=(125, 42, 42),
     name="Kobold",
-    ai_cls=FleeingAI,
+    ai_cls=HostileItemUser,
     race=race_factories.kobold_race,
     fighter=Fighter(hp=0, mp=0, se=0, sp=0,),
     status_effect_manager=StatusEffectManager(),
-    inventory=Inventory(capacity=2),
+    inventory=Inventory(capacity=7),
     level=Level(level_up_base=50, xp_given=10),
     equipment=Equipment(),
     conditions_manager=ConditionManager(),
@@ -66,7 +66,7 @@ troll = Actor(
     ai_cls=HostileEnemy,
     race=race_factories.troll_race,
     fighter=Fighter(hp=10, mp=0, se=0, sp=0,),
-    inventory=Inventory(capacity=3),
+    inventory=Inventory(capacity=10),
     status_effect_manager=StatusEffectManager(),
     level=Level(level_up_base=250, xp_given=100),
     equipment=Equipment(),
